@@ -35,24 +35,43 @@ export default function CarroPage() {
     <main style={{ padding: 40, maxWidth: 600 }}>
       <h1>{carro.modelo}</h1>
 
-{carro.tipo === "carro" && (
-  <>
+{carro.tipo === "carro" && (() => {
+  const carroData = carro as {
+    tipo: "carro";
+    km: string;
+    cambio: string;
+    combustivel: string;
+  };
+
+  return (
+    <>
       <p><strong>Ano:</strong> {carro.ano}</p>
       <p><strong>Preço:</strong> {carro.preco}</p>
-      <p><strong>KM:</strong> {carro.km}</p>
-      <p><strong>Câmbio:</strong> {carro.cambio}</p>
-      <p><strong>Combustível:</strong> {carro.combustivel}</p>
+      <p><strong>KM:</strong> {carroData.km}</p>
+      <p><strong>Câmbio:</strong> {carroData.cambio}</p>
+      <p><strong>Combustível:</strong> {carroData.combustivel}</p>
     </>
-)}
+  );
+})()}
 
-      {carro.tipo === "moto" && (
-  <>
 
-    <p><strong>Cilindrada:</strong> {carro.cilindrada}</p>
-    <p><strong>Partida:</strong> {carro.partida}</p>
-    <p><strong>Freio:</strong> {carro.freio}</p>
-  </>
-)}
+{carro.tipo === "moto" && (() => {
+  const motoData = carro as {
+    tipo: "moto";
+    cilindrada: string;
+    partida: string;
+    freio: string;
+  };
+
+  return (
+    <>
+      <p><strong>Cilindrada:</strong> {motoData.cilindrada}</p>
+      <p><strong>Partida:</strong> {motoData.partida}</p>
+      <p><strong>Freio:</strong> {motoData.freio}</p>
+    </>
+  );
+})()}
+
 
       {carro.observacoes && carro.observacoes.length > 0 && (
   <div style={{ marginTop: 20 }}>
