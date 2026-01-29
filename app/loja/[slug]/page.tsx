@@ -11,10 +11,10 @@ export default function LojaPage() {
   const pathname = usePathname();
   const slug = pathname.split("/").pop() || "";
 
-  const loja = lojas[slug];
+  const loja = lojas[slug as keyof typeof lojas];
   const searchParams = useSearchParams();
   const slugLoja = searchParams.get("loja") || "";
-  const lojaAtual = lojas[slugLoja];
+  const lojaAtual = lojas[slugLoja as keyof typeof lojas];
   const whatsappLoja = lojaAtual?.whatsapp || "5511999999999";
 
 
