@@ -13,7 +13,7 @@ export default function CarroPage() {
   // Ex: /carro/civic-2019
   const id = pathname.split("/").pop() || "";
 
-  const carro = carros[id];
+  const carro = carros[id as keyof typeof carros];
   const urlDoCarro = `http://localhost:3000/carro/${id}`;
   const searchParams = useSearchParams();
   const slugLoja = searchParams.get("loja") || "";
