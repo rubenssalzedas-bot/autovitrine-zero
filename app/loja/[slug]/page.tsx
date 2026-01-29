@@ -30,7 +30,7 @@ export default function LojaPage() {
       <p>Estoque disponível</p>
 
       {loja.carros.map((id) => {
-        const carro = carros[id];
+         const carro = carros[id as keyof typeof carros];
         if (!carro) return null;
 
         return (
