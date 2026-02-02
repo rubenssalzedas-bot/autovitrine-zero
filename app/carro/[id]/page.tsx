@@ -1,116 +1,105 @@
 "use client";
 
-"use client";
-
-import { usePathname, useSearchParams } from "next/navigation";
-import { carros } from "../data/carros";
-import { lojas } from "../../loja/data/lojas";
-
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { QRCodeCanvas } from "qrcode.react";
+import jsPDF from "jspdf";
 
 export default function CarroPage() {
-  const pathname = usePathname();
+  const params = useParams();
+  const id = params.id as string;
 
-  // Ex: /carro/civic-2019
-  const id = pathname.split("/").pop() || "";
+  const [carro, setCarro] = useState<any>(null);
 
-  const carro = carros[id as keyof typeof carros];
-  const urlDoCarro = `http://localhost:3000/carro/${id}`;
-  const searchParams = useSearchParams();
-  const slugLoja = searchParams.get("loja") || "";
+  useEffect(() => {
+    if (!id) return;
 
-  const lojaAtual = lojas[slugLoja as keyof typeof lojas];
-  const whatsappLoja = lojaAtual?.whatsapp || "5511999999999";
+    async function carregar() {
+      const { data } = await supabase
+        .from("veiculos")
+        .select("*")
+        .eq("id", id)
+        .single();
 
+      setCarro(data);
+    }
 
+    carregar();
+  }, [id]);
 
-  if (!id) {
-    return <h1>ID não encontrado na URL</h1>;
+  function baixarPDF() {
+    const pdf = new jsPDF();
+
+    pdf.setFontSize(18);
+    pdf.text(carro.modelo, 20, 20);
+
+    pdf.setFontSize(12);
+    pdf.text(`Ano: ${carro.ano}`, 20, 35);
+    pdf.text(`Preço: ${carro.preco}`, 20, 45);
+
+    const canvas = document.querySelector("canvas") as HTMLCanvasElement;
+    const imgData = canvas.toDataURL("image/png");
+
+    pdf.addImage(imgData, "PNG", 20, 60, 120, 120);
+    pdf.text("Escaneie o QR Code para ver este veículo", 20, 190);
+
+    pdf.save(`qr-${carro.modelo}.pdf`);
   }
 
   if (!carro) {
-    return <h1>Carro não encontrado</h1>;
+    return <p style={{ padding: 40 }}>Carregando...</p>;
   }
 
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
   return (
-    <main style={{ padding: 40, maxWidth: 600 }}>
+    <main style={{ padding: 20, maxWidth: 600, margin: "0 auto" }}>
       <h1>{carro.modelo}</h1>
 
-{carro.tipo === "carro" && (() => {
-  const carroData = carro as {
-    tipo: "carro";
-    km: string;
-    cambio: string;
-    combustivel: string;
-  };
-
-  return (
-    <>
       <p><strong>Ano:</strong> {carro.ano}</p>
       <p><strong>Preço:</strong> {carro.preco}</p>
-      <p><strong>KM:</strong> {carroData.km}</p>
-      <p><strong>Câmbio:</strong> {carroData.cambio}</p>
-      <p><strong>Combustível:</strong> {carroData.combustivel}</p>
-    </>
-  );
-})()}
 
+      {carro.km && <p><strong>KM:</strong> {carro.km}</p>}
+      {carro.cambio && <p><strong>Câmbio:</strong> {carro.cambio}</p>}
+      {carro.combustivel && (
+        <p><strong>Combustível:</strong> {carro.combustivel}</p>
+      )}
 
-{carro.tipo === "moto" && (() => {
-  const motoData = carro as {
-    tipo: "moto";
-    cilindrada: string;
-    partida: string;
-    freio: string;
-  };
+      {carro.observacoes && (
+        <>
+          <hr />
+          <p><strong>Observações:</strong></p>
+          <p>{carro.observacoes}</p>
+        </>
+      )}
 
-  return (
-    <>
-      <p><strong>Cilindrada:</strong> {motoData.cilindrada}</p>
-      <p><strong>Partida:</strong> {motoData.partida}</p>
-      <p><strong>Freio:</strong> {motoData.freio}</p>
-    </>
-  );
-})()}
+      <hr style={{ margin: "30px 0" }} />
 
+      <div style={{ textAlign: "center" }}>
+        <QRCodeCanvas
+          value={`${baseUrl}/carro/${id}`}
+          size={220}
+        />
 
-      {carro.observacoes && carro.observacoes.length > 0 && (
-  <div style={{ marginTop: 20 }}>
-    <h3>Observações</h3>
-    <ul>
-      {carro.observacoes.map((obs, index) => (
-        <li key={index}>{obs}</li>
-      ))}
-    </ul>
-  </div>
-)}
+        <br /><br />
 
-
-      <a
-          href={`https://wa.me/${whatsappLoja}?text=Olá! Tenho interesse no ${carro.modelo} ${carro.ano}.`}
-        target="_blank"
-        style={{
-          display: "inline-block",
-          marginTop: 20,
-          padding: "12px 20px",
-          backgroundColor: "#25D366",
-          color: "#fff",
-          textDecoration: "none",
-          borderRadius: 6,
-        }}
-      >
-        Falar no WhatsApp
-        <div style={{ marginTop: 30 }}>
-  <p><strong>Escaneie para ver no celular:</strong></p>
-
-  <img
-    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-      urlDoCarro
-    )}`}
-    alt="QR Code do veículo"
-  />
-</div>
-
-      </a>
+        <button
+          onClick={baixarPDF}
+          style={{
+            background: "#294460",
+            color: "#fff",
+            border: "none",
+            padding: "14px 20px",
+            borderRadius: 8,
+            fontWeight: "bold",
+            cursor: "pointer"
+          }}
+        >
+          Baixar QR Code em PDF
+        </button>
+      </div>
     </main>
   );
 }
