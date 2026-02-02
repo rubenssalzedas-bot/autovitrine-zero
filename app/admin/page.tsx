@@ -2,7 +2,6 @@
 
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
-import QRCode from "qrcode";
 
 
 export default function AdminPage() {
@@ -97,8 +96,6 @@ export default function AdminPage() {
              setMensagem("Loja cadastrada com sucesso!");
 
   const linkLoja = `${window.location.origin}/loja/${novaLoja.slug}`;
-  const qr = await QRCode.toDataURL(linkLoja);
-  setQrUrl(qr);
 
         form.reset();
         }
