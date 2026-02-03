@@ -30,14 +30,12 @@ export default function CarroPage() {
   }, [id]);
 
 function baixarPDF() {
-  alert("PDF GERADO SEM PREÇO");
+  const pdf = new jsPDF();
 
   setQrPdfReady(true);
 
   setTimeout(() => {
-    const pdf = new jsPDF();
-
-
+  
     pdf.setFontSize(18);
     pdf.text(carro.modelo, 20, 20);
 
