@@ -3,6 +3,32 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+const boxStyle = {
+  background: "#ffffff",
+  padding: 24,
+  borderRadius: 12,
+  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+  marginBottom: 30
+};
+
+const inputStyle = {
+  padding: "10px 12px",
+  borderRadius: 6,
+  border: "1px solid #ccc",
+  fontSize: 14
+};
+
+const buttonStyle = {
+  background: "#294460",
+  color: "#fff",
+  padding: "12px",
+  borderRadius: 8,
+  border: "none",
+  cursor: "pointer",
+  fontWeight: "bold",
+  marginTop: 10
+};
+
 export default function AdminPage() {
   const [mensagem, setMensagem] = useState("");
 
@@ -15,7 +41,7 @@ export default function AdminPage() {
     const cor = String(formData.get("cor")).trim();
 
     if (!slug || !nome || !whatsapp) {
-      setMensagem("Preencha todos os campos obrigatórios.");
+      setMensagem("❌ Preencha todos os campos obrigatórios da loja.");
       return;
     }
 
@@ -27,7 +53,7 @@ export default function AdminPage() {
     });
 
     if (error) {
-      setMensagem("Erro ao cadastrar loja: " + error.message);
+      setMensagem("❌ Erro ao cadastrar loja: " + error.message);
       return;
     }
 
@@ -47,7 +73,7 @@ export default function AdminPage() {
     const observacoes = String(formData.get("observacoes")).trim();
 
     if (!loja_slug || !modelo || !ano || !preco) {
-      setMensagem("Preencha os campos obrigatórios do veículo.");
+      setMensagem("❌ Preencha os campos obrigatórios do veículo.");
       return;
     }
 
@@ -63,7 +89,7 @@ export default function AdminPage() {
     });
 
     if (error) {
-      setMensagem("Erro ao cadastrar veículo: " + error.message);
+      setMensagem("❌ Erro ao cadastrar veículo: " + error.message);
       return;
     }
 
@@ -71,44 +97,120 @@ export default function AdminPage() {
   }
 
   return (
-    <main style={{ maxWidth: 700, margin: "0 auto", padding: 30 }}>
-      <h1>Painel Admin — AutoVitrine</h1>
+    <main style={{ maxWidth: 800, margin: "0 auto", padding: 30 }}>
+      <h1 style={{ marginBottom: 20 }}>Painel Administrativo — AutoVitrine</h1>
 
       {mensagem && (
-        <p style={{ marginTop: 20, fontWeight: "bold" }}>{mensagem}</p>
+        <p style={{ marginBottom: 20, fontWeight: "bold" }}>
+          {mensagem}
+        </p>
       )}
 
-      <hr style={{ margin: "30px 0" }} />
+      {/* CADASTRO DE LOJA */}
+      <section style={boxStyle}>
+        <h2>Cadastrar Loja</h2>
 
-      {/* CADASTRAR LOJA */}
-      <h2>Cadastrar Loja</h2>
+        <form action={cadastrarLoja} style={{ display: "grid", gap: 10 }}>
+          <input
+            name="slug"
+            placeholder="Slug da loja (ex: auto-centro-silva)"
+            required
+            style={inputStyle}
+          />
 
-      <form action={cadastrarLoja} style={{ display: "grid", gap: 10 }}>
-        <input name="slug" placeholder="slug-da-loja" required />
-        <input name="nome" placeholder="Nome da Loja" required />
-        <input name="whatsapp" placeholder="WhatsApp (ex: 5511999999999)" required />
-        <input name="cor" placeholder="Cor da loja (ex: #294460)" />
+          <input
+            name="nome"
+            placeholder="Nome da loja"
+            required
+            style={inputStyle}
+          />
 
-        <button type="submit">Cadastrar Loja</button>
-      </form>
+          <input
+            name="whatsapp"
+            placeholder="WhatsApp (ex: 5511999999999)"
+            required
+            style={inputStyle}
+          />
 
-      <hr style={{ margin: "30px 0" }} />
+          <label style={{ fontSize: 14, marginTop: 5 }}>
+            Cor da loja
+          </label>
+          <input
+            type="color"
+            name="cor"
+            defaultValue="#294460"
+            style={{ height: 45, padding: 4 }}
+          />
 
-      {/* CADASTRAR VEÍCULO */}
-      <h2>Cadastrar Veículo</h2>
+          <button type="submit" style={buttonStyle}>
+            Salvar Loja
+          </button>
+        </form>
+      </section>
 
-      <form action={cadastrarVeiculo} style={{ display: "grid", gap: 10 }}>
-        <input name="loja_slug" placeholder="slug-da-loja" required />
-        <input name="modelo" placeholder="Modelo do veículo" required />
-        <input name="ano" type="number" placeholder="Ano" required />
-        <input name="preco" placeholder="Preço" required />
-        <input name="km" placeholder="KM" />
-        <input name="cambio" placeholder="Câmbio" />
-        <input name="combustivel" placeholder="Combustível" />
-        <textarea name="observacoes" placeholder="Observações" />
+      {/* CADASTRO DE VEÍCULO */}
+      <section style={boxStyle}>
+        <h2>Cadastrar Veículo</h2>
 
-        <button type="submit">Cadastrar Veículo</button>
-      </form>
+        <form action={cadastrarVeiculo} style={{ display: "grid", gap: 10 }}>
+          <input
+            name="loja_slug"
+            placeholder="Slug da loja (ex: auto-centro-silva)"
+            required
+            style={inputStyle}
+          />
+
+          <input
+            name="modelo"
+            placeholder="Modelo do veículo"
+            required
+            style={inputStyle}
+          />
+
+          <input
+            name="ano"
+            type="number"
+            placeholder="Ano"
+            required
+            style={inputStyle}
+          />
+
+          <input
+            name="preco"
+            placeholder="Preço (ex: R$ 75.000)"
+            required
+            style={inputStyle}
+          />
+
+          <input
+            name="km"
+            placeholder="KM"
+            style={inputStyle}
+          />
+
+          <input
+            name="cambio"
+            placeholder="Câmbio"
+            style={inputStyle}
+          />
+
+          <input
+            name="combustivel"
+            placeholder="Combustível"
+            style={inputStyle}
+          />
+
+          <textarea
+            name="observacoes"
+            placeholder="Observações do veículo"
+            style={{ ...inputStyle, minHeight: 80 }}
+          />
+
+          <button type="submit" style={buttonStyle}>
+            Salvar Veículo
+          </button>
+        </form>
+      </section>
     </main>
   );
 }
