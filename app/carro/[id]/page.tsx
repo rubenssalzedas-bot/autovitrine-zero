@@ -30,6 +30,8 @@ export default function CarroPage() {
   }, [id]);
 
 function baixarPDF() {
+  console.log("VERSÃO NOVA DO PDF - SEM ALERTA");
+
   const pdf = new jsPDF();
 
   setQrPdfReady(true);
