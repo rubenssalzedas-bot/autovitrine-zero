@@ -11,6 +11,7 @@ export default function CarroPage() {
   const id = params.id as string;
 
   const [carro, setCarro] = useState<any>(null);
+  const [qrPdfReady, setQrPdfReady] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -28,24 +29,33 @@ export default function CarroPage() {
     carregar();
   }, [id]);
 
-  function baixarPDF() {
+function baixarPDF() {
+  alert("PDF GERADO SEM PREÇO");
+
+  setQrPdfReady(true);
+
+  setTimeout(() => {
     const pdf = new jsPDF();
+
 
     pdf.setFontSize(18);
     pdf.text(carro.modelo, 20, 20);
 
     pdf.setFontSize(12);
     pdf.text(`Ano: ${carro.ano}`, 20, 35);
-    pdf.text(`Preço: ${carro.preco}`, 20, 45);
 
-    const canvas = document.querySelector("canvas") as HTMLCanvasElement;
+    const canvas = document.getElementById("qr-pdf") as HTMLCanvasElement;
     const imgData = canvas.toDataURL("image/png");
 
-    pdf.addImage(imgData, "PNG", 20, 60, 120, 120);
-    pdf.text("Escaneie o QR Code para ver este veículo", 20, 190);
+    pdf.addImage(imgData, "PNG", 20, 55, 120, 120);
+    pdf.text("Escaneie o QR Code para ver este veículo", 20, 185);
 
-    pdf.save(`qr-${carro.modelo}.pdf`);
-  }
+    pdf.save(`qr-${carro.modelo}-${Date.now()}.pdf`);
+
+    setQrPdfReady(false);
+  }, 300);
+}
+
 
   if (!carro) {
     return <p style={{ padding: 40 }}>Carregando...</p>;
@@ -77,6 +87,7 @@ export default function CarroPage() {
 
       <hr style={{ margin: "30px 0" }} />
 
+      {/* QR VISÍVEL NA TELA */}
       <div style={{ textAlign: "center" }}>
         <QRCodeCanvas
           value={`${baseUrl}/carro/${id}`}
@@ -99,6 +110,17 @@ export default function CarroPage() {
         >
           Baixar QR Code em PDF
         </button>
+      </div>
+
+      {/* QR OCULTO — USADO SOMENTE PARA O PDF */}
+      <div style={{ position: "absolute", left: -9999, top: -9999 }}>
+        {qrPdfReady && (
+          <QRCodeCanvas
+            id="qr-pdf"
+            value={`${baseUrl}/carro/${id}`}
+            size={300}
+          />
+        )}
       </div>
     </main>
   );
