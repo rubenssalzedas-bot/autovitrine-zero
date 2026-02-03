@@ -1,231 +1,114 @@
 "use client";
 
-import { supabase } from "@/lib/supabase";
 import { useState } from "react";
-
+import { supabase } from "@/lib/supabase";
 
 export default function AdminPage() {
-
   const [mensagem, setMensagem] = useState("");
-  const [qrUrl, setQrUrl] = useState("");
 
+  async function cadastrarLoja(formData: FormData) {
+    setMensagem("");
 
-  const cardStyle = {
-    background: "#fff",
-    padding: 25,
-    borderRadius: 16,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-    marginBottom: 30
-  };
+    const slug = String(formData.get("slug")).trim();
+    const nome = String(formData.get("nome")).trim();
+    const whatsapp = String(formData.get("whatsapp")).trim();
+    const cor = String(formData.get("cor")).trim();
 
-  const inputStyle = {
-    width: "100%",
-    padding: 12,
-    borderRadius: 10,
-    border: "1px solid #ddd",
-    marginTop: 5
-  };
+    if (!slug || !nome || !whatsapp) {
+      setMensagem("Preencha todos os campos obrigatórios.");
+      return;
+    }
 
-  const buttonStyle = {
-    background: "#294460",
-    color: "#fff",
-    padding: "14px 20px",
-    borderRadius: 12,
-    border: "none",
-    fontWeight: "bold",
-    cursor: "pointer",
-    width: "100%",
-    marginTop: 10
-  };
+    const { error } = await supabase.from("lojas").insert({
+      slug,
+      nome,
+      whatsapp,
+      cor,
+    });
+
+    if (error) {
+      setMensagem("Erro ao cadastrar loja: " + error.message);
+      return;
+    }
+
+    setMensagem("✅ Loja cadastrada com sucesso!");
+  }
+
+  async function cadastrarVeiculo(formData: FormData) {
+    setMensagem("");
+
+    const loja_slug = String(formData.get("loja_slug")).trim();
+    const modelo = String(formData.get("modelo")).trim();
+    const ano = Number(formData.get("ano"));
+    const preco = String(formData.get("preco")).trim();
+    const km = String(formData.get("km")).trim();
+    const cambio = String(formData.get("cambio")).trim();
+    const combustivel = String(formData.get("combustivel")).trim();
+    const observacoes = String(formData.get("observacoes")).trim();
+
+    if (!loja_slug || !modelo || !ano || !preco) {
+      setMensagem("Preencha os campos obrigatórios do veículo.");
+      return;
+    }
+
+    const { error } = await supabase.from("veiculos").insert({
+      loja_slug,
+      modelo,
+      ano,
+      preco,
+      km,
+      cambio,
+      combustivel,
+      observacoes,
+    });
+
+    if (error) {
+      setMensagem("Erro ao cadastrar veículo: " + error.message);
+      return;
+    }
+
+    setMensagem("✅ Veículo cadastrado com sucesso!");
+  }
 
   return (
-    <main style={{
-      maxWidth: 700,
-      margin: "0 auto",
-      padding: 30,
-      fontFamily: "Arial, sans-serif",
-      background: "#f4f6f9",
-      minHeight: "100vh"
-    }}>
-
-      <h1 style={{ textAlign: "center", marginBottom: 30 }}>
-        Painel Admin AutoVitrine
-      </h1>
+    <main style={{ maxWidth: 700, margin: "0 auto", padding: 30 }}>
+      <h1>Painel Admin — AutoVitrine</h1>
 
       {mensagem && (
-        <p style={{
-          background: "#e6f4ea",
-          padding: 15,
-          borderRadius: 10,
-          textAlign: "center",
-          marginBottom: 20
-        }}>
-          {mensagem}
-        </p>
+        <p style={{ marginTop: 20, fontWeight: "bold" }}>{mensagem}</p>
       )}
 
-      {/* ================= LOJA ================= */}
+      <hr style={{ margin: "30px 0" }} />
 
-      <div style={cardStyle}>
+      {/* CADASTRAR LOJA */}
+      <h2>Cadastrar Loja</h2>
 
-        <h2>Cadastrar Loja</h2>
+      <form action={cadastrarLoja} style={{ display: "grid", gap: 10 }}>
+        <input name="slug" placeholder="slug-da-loja" required />
+        <input name="nome" placeholder="Nome da Loja" required />
+        <input name="whatsapp" placeholder="WhatsApp (ex: 5511999999999)" required />
+        <input name="cor" placeholder="Cor da loja (ex: #294460)" />
 
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const form = e.target as any;
+        <button type="submit">Cadastrar Loja</button>
+      </form>
 
-            const novaLoja = {
-              slug: form.slug.value.trim(),
-              nome: form.nome.value.trim(),
-              whatsapp: form.whatsapp.value.trim(),
-              cor: form.cor.value,
-              logo: form.logo.value.trim()
-            };
+      <hr style={{ margin: "30px 0" }} />
 
-            const { error } = await supabase
-              .from("lojas")
-              .insert([novaLoja]);
+      {/* CADASTRAR VEÍCULO */}
+      <h2>Cadastrar Veículo</h2>
 
-            if (error) {
-            console.error(error);
-            alert(error.message);
-            setMensagem("Erro ao cadastrar loja");
-         } else {
+      <form action={cadastrarVeiculo} style={{ display: "grid", gap: 10 }}>
+        <input name="loja_slug" placeholder="slug-da-loja" required />
+        <input name="modelo" placeholder="Modelo do veículo" required />
+        <input name="ano" type="number" placeholder="Ano" required />
+        <input name="preco" placeholder="Preço" required />
+        <input name="km" placeholder="KM" />
+        <input name="cambio" placeholder="Câmbio" />
+        <input name="combustivel" placeholder="Combustível" />
+        <textarea name="observacoes" placeholder="Observações" />
 
-             setMensagem("Loja cadastrada com sucesso!");
-
-  const linkLoja = `${window.location.origin}/loja/${novaLoja.slug}`;
-
-        form.reset();
-        }
-          }}
-        >
-
-          <label>Slug da Loja</label>
-          <input name="slug" required style={inputStyle} />
-
-          <label style={{ marginTop: 15, display: "block" }}>Nome da Loja</label>
-          <input name="nome" required style={inputStyle} />
-
-          <label style={{ marginTop: 15, display: "block" }}>WhatsApp</label>
-          <input name="whatsapp" required style={inputStyle} />
-
-          <label style={{ marginTop: 15, display: "block" }}>Cor da Loja</label>
-          <input type="color" name="cor" defaultValue="#294460" style={{ marginTop: 10 }} />
-
-          <label style={{ marginTop: 15, display: "block" }}>Logo URL</label>
-          <input name="logo" style={inputStyle} />
-
-          <button type="submit" style={buttonStyle}>
-            Cadastrar Loja
-          </button>
-
-        </form>
-        {qrUrl && (
-  <div style={{
-    marginTop: 20,
-    textAlign: "center",
-    background: "#fff",
-    padding: 20,
-    borderRadius: 12,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
-  }}>
-    <h3>QR Code da Loja</h3>
-
-    <img src={qrUrl} alt="QR Code da Loja" />
-
-    <p style={{ marginTop: 10 }}>
-      Escaneie para abrir a loja
-    </p>
-  </div>
-)}
-
-
-      </div>
-
-      {/* ================= VEÍCULO ================= */}
-
-      <div style={cardStyle}>
-
-        <h2>Cadastrar Veículo</h2>
-
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const form = e.target as any;
-
-            const novoVeiculo = {
-  loja_slug: form.loja_slug.value.trim(),
-  tipo: form.tipo.value,
-  modelo: form.modelo.value.trim(),
-  ano: Number(form.ano.value),
-  preco: form.preco.value.trim(),
-  km: form.km.value.trim(),
-  cambio: form.cambio.value.trim(),
-  combustivel: form.combustivel.value.trim(),
-  observacoes: form.observacoes.value.trim()
-};
-
-
-            const { error } = await supabase
-              .from("veiculos")
-              .insert([novoVeiculo]);
-
-            if (error) {
-           console.error(error);
-           alert(error.message);
-           setMensagem("Erro ao cadastrar veículo");
-        } else {
-
-              setMensagem("Veículo cadastrado com sucesso!");
-              form.reset();
-            }
-          }}
-        >
-
-          <label>Slug da Loja</label>
-          <input name="loja_slug" required style={inputStyle} />
-
-          <label style={{ marginTop: 15, display: "block" }}>Tipo</label>
-          <select name="tipo" style={inputStyle}>
-            <option value="carro">Carro</option>
-            <option value="moto">Moto</option>
-          </select>
-
-          <label style={{ marginTop: 15, display: "block" }}>Modelo</label>
-          <input name="modelo" required style={inputStyle} />
-
-          <label style={{ marginTop: 15, display: "block" }}>Ano</label>
-          <input name="ano" required style={inputStyle} />
-
-          <label style={{ marginTop: 15, display: "block" }}>Preço</label>
-          <input name="preco" required style={inputStyle} />
-          <label style={{ marginTop: 15, display: "block" }}>KM</label>
-<input name="km" style={inputStyle} />
-
-<label style={{ marginTop: 15, display: "block" }}>Câmbio</label>
-<input name="cambio" style={inputStyle} />
-
-<label style={{ marginTop: 15, display: "block" }}>Combustível</label>
-<input name="combustivel" style={inputStyle} />
-
-<label style={{ marginTop: 15, display: "block" }}>Observações</label>
-<textarea
-  name="observacoes"
-  rows={3}
-  style={{ ...inputStyle, resize: "vertical" }}
-/>
-
-
-          <button type="submit" style={buttonStyle}>
-            Cadastrar Veículo
-          </button>
-
-        </form>
-
-      </div>
-
+        <button type="submit">Cadastrar Veículo</button>
+      </form>
     </main>
   );
 }
