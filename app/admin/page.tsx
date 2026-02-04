@@ -6,6 +6,7 @@ import { QRCodeCanvas } from "qrcode.react";
 
 export default function AdminPage() {
   const [qrUrl, setQrUrl] = useState("");
+  const [tipoSelecionado, setTipoSelecionado] = useState<"carro" | "moto">("carro");
 
   async function cadastrarLoja(e: any) {
     e.preventDefault();
@@ -33,17 +34,33 @@ export default function AdminPage() {
 
     const tipo = form.tipo.value;
 
-    const { data, error } = await supabase.from("veiculos").insert({
+    const payload: any = {
       tipo,
       modelo: form.modelo.value,
       ano: form.ano.value,
       preco: form.preco.value,
-      km: tipo === "carro" ? form.km.value : null,
-      cambio: tipo === "carro" ? form.cambio.value : null,
-      combustivel: tipo === "carro" ? form.combustivel.value : null,
       observacoes: form.observacoes.value,
       loja_slug: form.loja_slug.value
-    }).select().single();
+    };
+
+    // Campos específicos
+    if (tipo === "carro") {
+      payload.km = form.km.value;
+      payload.cambio = form.cambio.value;
+      payload.combustivel = form.combustivel.value;
+    }
+
+    if (tipo === "moto") {
+      payload.cilindrada = form.cilindrada.value;
+      payload.partida = form.partida.value;
+      payload.freio = form.freio.value;
+    }
+
+    const { data, error } = await supabase
+      .from("veiculos")
+      .insert(payload)
+      .select()
+      .single();
 
     if (error) {
       alert("❌ Erro ao cadastrar veículo: " + error.message);
@@ -55,6 +72,7 @@ export default function AdminPage() {
 
       setQrUrl(`${baseUrl}/carro/${data.id}?loja=${data.loja_slug}`);
       form.reset();
+      setTipoSelecionado("carro");
     }
   }
 
@@ -99,7 +117,6 @@ export default function AdminPage() {
           <input type="color" name="cor" defaultValue="#294460" />
 
           <br /><br />
-
           <button type="submit">Cadastrar Loja</button>
         </form>
       </section>
@@ -110,7 +127,6 @@ export default function AdminPage() {
       <section>
         <h2>Cadastrar Veículo</h2>
 
-
         <form onSubmit={cadastrarVeiculo}>
           <label>Slug da Loja</label>
           <input name="loja_slug" required style={inputStyle} />
@@ -118,7 +134,13 @@ export default function AdminPage() {
           <label style={{ marginTop: 15, display: "block" }}>
             Tipo de Veículo
           </label>
-          <select name="tipo" required style={inputStyle}>
+          <select
+            name="tipo"
+            required
+            style={inputStyle}
+            value={tipoSelecionado}
+            onChange={(e) => setTipoSelecionado(e.target.value as any)}
+          >
             <option value="carro">Carro</option>
             <option value="moto">Moto</option>
           </select>
@@ -138,20 +160,45 @@ export default function AdminPage() {
           </label>
           <input name="preco" required style={inputStyle} />
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            KM (somente carro)
-          </label>
-          <input name="km" style={inputStyle} />
+          {/* CAMPOS DE CARRO */}
+          {tipoSelecionado === "carro" && (
+            <>
+              <label style={{ marginTop: 15, display: "block" }}>
+                KM
+              </label>
+              <input name="km" style={inputStyle} />
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            Câmbio (somente carro)
-          </label>
-          <input name="cambio" style={inputStyle} />
+              <label style={{ marginTop: 15, display: "block" }}>
+                Câmbio
+              </label>
+              <input name="cambio" style={inputStyle} />
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            Combustível (somente carro)
-          </label>
-          <input name="combustivel" style={inputStyle} />
+              <label style={{ marginTop: 15, display: "block" }}>
+                Combustível
+              </label>
+              <input name="combustivel" style={inputStyle} />
+            </>
+          )}
+
+          {/* CAMPOS DE MOTO */}
+          {tipoSelecionado === "moto" && (
+            <>
+              <label style={{ marginTop: 15, display: "block" }}>
+                Cilindrada
+              </label>
+              <input name="cilindrada" style={inputStyle} />
+
+              <label style={{ marginTop: 15, display: "block" }}>
+                Partida
+              </label>
+              <input name="partida" placeholder="Elétrica / Pedal" style={inputStyle} />
+
+              <label style={{ marginTop: 15, display: "block" }}>
+                Freio
+              </label>
+              <input name="freio" placeholder="ABS / Disco / Tambor" style={inputStyle} />
+            </>
+          )}
 
           <label style={{ marginTop: 15, display: "block" }}>
             Observações
@@ -159,7 +206,6 @@ export default function AdminPage() {
           <textarea name="observacoes" style={inputStyle} />
 
           <br /><br />
-
           <button type="submit">Cadastrar Veículo</button>
         </form>
       </section>
