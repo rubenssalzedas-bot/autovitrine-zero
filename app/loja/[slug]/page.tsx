@@ -1,91 +1,95 @@
-import { supabase } from "@/lib/supabase";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
-export default async function LojaPage({ params }: any) {
+export default function LojaPage() {
+  const params = useParams();
+  const slug = params.slug as string;
 
-  const { slug } = await params;
+  const [loja, setLoja] = useState<any>(null);
+  const [veiculos, setVeiculos] = useState<any[]>([]);
 
-  // BUSCAR LOJA
-  const { data: loja } = await supabase
-    .from("lojas")
-    .select("*")
-    .ilike("slug", `%${slug.trim()}%`)
-    .single();
+  useEffect(() => {
+    if (!slug) return;
+
+    async function carregar() {
+      // Buscar dados da loja
+      const { data: lojaData } = await supabase
+        .from("lojas")
+        .select("*")
+        .eq("slug", slug)
+        .single();
+
+      setLoja(lojaData);
+
+      // Buscar veículos da loja
+      const { data: veiculosData } = await supabase
+        .from("veiculos")
+        .select("*")
+        .eq("loja_slug", slug);
+
+      setVeiculos(veiculosData || []);
+    }
+
+    carregar();
+  }, [slug]);
 
   if (!loja) {
-    return <h1 style={{ padding: 40 }}>Loja não encontrada</h1>;
+    return <p style={{ padding: 40 }}>Carregando loja...</p>;
   }
 
-  const corLoja = loja.cor?.trim() || "#294460";
-
-  // 🚀 BUSCAR VEÍCULOS DA LOJA
-  const { data: veiculos } = await supabase
-    .from("veiculos")
-    .select("*")
-    .ilike("loja_slug", `%${slug.trim()}%`);
-
   return (
-    <main>
-
-      {/* BARRA SUPERIOR */}
-      <div style={{
-        background: corLoja,
-        color: "#fff",
-        padding: 20
-      }}>
-        <h1>{loja.nome?.trim()}</h1>
+    <main style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
+      {/* CABEÇALHO DA LOJA */}
+      <div
+        style={{
+          background: loja.cor || "#294460",
+          color: "#fff",
+          padding: 20,
+          borderRadius: 8,
+          marginBottom: 30
+        }}
+      >
+        <h1>{loja.nome}</h1>
       </div>
 
-      {/* CONTEÚDO */}
-      <div style={{ padding: 20 }}>
+      {/* LISTA DE VEÍCULOS */}
+      <h2>Veículos disponíveis</h2>
 
-        <a
-          href={`https://wa.me/${loja.whatsapp?.trim()}`}
-          target="_blank"
-          style={{
-            background: corLoja,
-            color: "#fff",
-            padding: "14px 20px",
-            borderRadius: 10,
-            display: "inline-block",
-            fontWeight: "bold"
-          }}
-        >
-          Falar no WhatsApp
-        </a>
+      {veiculos.length === 0 && <p>Nenhum veículo cadastrado.</p>}
 
-        {/* LISTA VEÍCULOS */}
-        <h2 style={{ marginTop: 30 }}>Estoque disponível</h2>
-
-        {!veiculos || veiculos.length === 0 && (
-          <p>Nenhum veículo cadastrado.</p>
-        )}
-
-        {veiculos?.map((carro: any) => (
+      <div style={{ display: "grid", gap: 16 }}>
+        {veiculos.map((veiculo) => (
           <div
-            key={carro.id}
+            key={veiculo.id}
             style={{
               border: "1px solid #ddd",
-              borderRadius: 10,
-              padding: 20,
-              marginTop: 15
+              borderRadius: 8,
+              padding: 16
             }}
           >
-            <h3>{carro.modelo}</h3>
-
+            <h3>{veiculo.modelo}</h3>
             <p>
-              {carro.ano} • {carro.preco}
+              {veiculo.ano} • {veiculo.preco}
             </p>
 
-            <Link href={`/carro/${carro.id}`}>
+            {/* LINK CORRETO COM SLUG DA LOJA */}
+            <Link
+              href={`/carro/${veiculo.id}?loja=${slug}`}
+              style={{
+                color: "#294460",
+                fontWeight: "bold",
+                textDecoration: "none"
+              }}
+            >
               Ver detalhes →
             </Link>
-
           </div>
         ))}
-
       </div>
-
     </main>
   );
 }
