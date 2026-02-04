@@ -78,7 +78,6 @@ export default function CarroPage() {
 
   return (
     <main style={{ padding: 20, maxWidth: 600, margin: "0 auto" }}>
-      <h2 style={{ color: "red" }}>TESTE WHATSAPP ATIVO</h2>
       <h1>{carro.modelo}</h1>
 
       <p><strong>Ano:</strong> {carro.ano}</p>
