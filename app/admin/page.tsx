@@ -2,215 +2,175 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-
-const boxStyle = {
-  background: "#ffffff",
-  padding: 24,
-  borderRadius: 12,
-  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-  marginBottom: 30
-};
-
-const inputStyle = {
-  padding: "10px 12px",
-  borderRadius: 6,
-  border: "1px solid #ccc",
-  fontSize: 14
-};
-
-const buttonStyle = {
-  background: "#294460",
-  color: "#fff",
-  padding: "12px",
-  borderRadius: 8,
-  border: "none",
-  cursor: "pointer",
-  fontWeight: "bold",
-  marginTop: 10
-};
+import { QRCodeCanvas } from "qrcode.react";
 
 export default function AdminPage() {
-  const [mensagem, setMensagem] = useState("");
+  const [qrUrl, setQrUrl] = useState("");
 
-  async function cadastrarLoja(formData: FormData) {
-    setMensagem("");
-
-    const slug = String(formData.get("slug")).trim();
-    const nome = String(formData.get("nome")).trim();
-    const whatsapp = String(formData.get("whatsapp")).trim();
-    const cor = String(formData.get("cor")).trim();
-
-    if (!slug || !nome || !whatsapp) {
-      setMensagem("❌ Preencha todos os campos obrigatórios da loja.");
-      return;
-    }
+  async function cadastrarLoja(e: any) {
+    e.preventDefault();
+    const form = e.target;
 
     const { error } = await supabase.from("lojas").insert({
-      slug,
-      nome,
-      whatsapp,
-      cor,
+      slug: form.slug.value,
+      nome: form.nome.value,
+      whatsapp: form.whatsapp.value,
+      cor: form.cor.value,
+      logo: ""
     });
 
     if (error) {
-      setMensagem("❌ Erro ao cadastrar loja: " + error.message);
-      return;
+      alert("❌ Erro ao cadastrar loja: " + error.message);
+    } else {
+      alert("✅ Loja cadastrada com sucesso");
+      form.reset();
     }
-
-    setMensagem("✅ Loja cadastrada com sucesso!");
   }
 
-  async function cadastrarVeiculo(formData: FormData) {
-    setMensagem("");
+  async function cadastrarVeiculo(e: any) {
+    e.preventDefault();
+    const form = e.target;
 
-    const loja_slug = String(formData.get("loja_slug")).trim();
-    const modelo = String(formData.get("modelo")).trim();
-    const ano = Number(formData.get("ano"));
-    const preco = String(formData.get("preco")).trim();
-    const km = String(formData.get("km")).trim();
-    const cambio = String(formData.get("cambio")).trim();
-    const combustivel = String(formData.get("combustivel")).trim();
-    const observacoes = String(formData.get("observacoes")).trim();
+    const tipo = form.tipo.value;
 
-    if (!loja_slug || !modelo || !ano || !preco) {
-      setMensagem("❌ Preencha os campos obrigatórios do veículo.");
-      return;
-    }
-
-    const { error } = await supabase.from("veiculos").insert({
-      loja_slug,
-      modelo,
-      ano,
-      preco,
-      km,
-      cambio,
-      combustivel,
-      observacoes,
-    });
+    const { data, error } = await supabase.from("veiculos").insert({
+      tipo,
+      modelo: form.modelo.value,
+      ano: form.ano.value,
+      preco: form.preco.value,
+      km: tipo === "carro" ? form.km.value : null,
+      cambio: tipo === "carro" ? form.cambio.value : null,
+      combustivel: tipo === "carro" ? form.combustivel.value : null,
+      observacoes: form.observacoes.value,
+      loja_slug: form.loja_slug.value
+    }).select().single();
 
     if (error) {
-      setMensagem("❌ Erro ao cadastrar veículo: " + error.message);
-      return;
-    }
+      alert("❌ Erro ao cadastrar veículo: " + error.message);
+    } else {
+      alert("✅ Veículo cadastrado com sucesso");
 
-    setMensagem("✅ Veículo cadastrado com sucesso!");
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+      setQrUrl(`${baseUrl}/carro/${data.id}?loja=${data.loja_slug}`);
+      form.reset();
+    }
   }
+
+  const inputStyle = {
+    width: "100%",
+    padding: 10,
+    marginTop: 5,
+    borderRadius: 6,
+    border: "1px solid #ccc"
+  };
 
   return (
-    <main style={{ maxWidth: 800, margin: "0 auto", padding: 30 }}>
-      <h1 style={{ marginBottom: 20 }}>Painel Administrativo — AutoVitrine</h1>
-
-      {mensagem && (
-        <p style={{ marginBottom: 20, fontWeight: "bold" }}>
-          {mensagem}
-        </p>
-      )}
+    <main style={{ padding: 30, maxWidth: 700, margin: "0 auto" }}>
+      <h1>Painel Admin – AutoVitrine</h1>
 
       {/* CADASTRO DE LOJA */}
-      <section style={boxStyle}>
+      <section style={{ marginTop: 40 }}>
         <h2>Cadastrar Loja</h2>
 
-        <form action={cadastrarLoja} style={{ display: "grid", gap: 10 }}>
-          <input
-            name="slug"
-            placeholder="Slug da loja (ex: auto-centro-silva)"
-            required
-            style={inputStyle}
-          />
+        <form onSubmit={cadastrarLoja}>
+          <label>Slug da Loja</label>
+          <input name="slug" required style={inputStyle} />
 
-          <input
-            name="nome"
-            placeholder="Nome da loja"
-            required
-            style={inputStyle}
-          />
+          <label style={{ marginTop: 15, display: "block" }}>
+            Nome da Loja
+          </label>
+          <input name="nome" required style={inputStyle} />
 
-          <input
-            name="whatsapp"
-            placeholder="WhatsApp (ex: 5511999999999)"
-            required
-            style={inputStyle}
-          />
-
-          <label style={{ fontSize: 14, marginTop: 5 }}>
-            Cor da loja
+          <label style={{ marginTop: 15, display: "block" }}>
+            WhatsApp
           </label>
           <input
-            type="color"
-            name="cor"
-            defaultValue="#294460"
-            style={{ height: 45, padding: 4 }}
+            name="whatsapp"
+            required
+            placeholder="5511999999999"
+            style={inputStyle}
           />
 
-          <button type="submit" style={buttonStyle}>
-            Salvar Loja
-          </button>
+          <label style={{ marginTop: 15, display: "block" }}>
+            Cor da Loja
+          </label>
+          <input type="color" name="cor" defaultValue="#294460" />
+
+          <br /><br />
+
+          <button type="submit">Cadastrar Loja</button>
         </form>
       </section>
+
+      <hr style={{ margin: "40px 0" }} />
 
       {/* CADASTRO DE VEÍCULO */}
-      <section style={boxStyle}>
+      <section>
         <h2>Cadastrar Veículo</h2>
 
-        <form action={cadastrarVeiculo} style={{ display: "grid", gap: 10 }}>
-          <input
-            name="loja_slug"
-            placeholder="Slug da loja (ex: auto-centro-silva)"
-            required
-            style={inputStyle}
-          />
+        <form onSubmit={cadastrarVeiculo}>
+          <label>Slug da Loja</label>
+          <input name="loja_slug" required style={inputStyle} />
 
-          <input
-            name="modelo"
-            placeholder="Modelo do veículo"
-            required
-            style={inputStyle}
-          />
+          <label style={{ marginTop: 15, display: "block" }}>
+            Tipo de Veículo
+          </label>
+          <select name="tipo" required style={inputStyle}>
+            <option value="carro">Carro</option>
+            <option value="moto">Moto</option>
+          </select>
 
-          <input
-            name="ano"
-            type="number"
-            placeholder="Ano"
-            required
-            style={inputStyle}
-          />
+          <label style={{ marginTop: 15, display: "block" }}>
+            Modelo
+          </label>
+          <input name="modelo" required style={inputStyle} />
 
-          <input
-            name="preco"
-            placeholder="Preço (ex: R$ 75.000)"
-            required
-            style={inputStyle}
-          />
+          <label style={{ marginTop: 15, display: "block" }}>
+            Ano
+          </label>
+          <input name="ano" required style={inputStyle} />
 
-          <input
-            name="km"
-            placeholder="KM"
-            style={inputStyle}
-          />
+          <label style={{ marginTop: 15, display: "block" }}>
+            Preço
+          </label>
+          <input name="preco" required style={inputStyle} />
 
-          <input
-            name="cambio"
-            placeholder="Câmbio"
-            style={inputStyle}
-          />
+          <label style={{ marginTop: 15, display: "block" }}>
+            KM (somente carro)
+          </label>
+          <input name="km" style={inputStyle} />
 
-          <input
-            name="combustivel"
-            placeholder="Combustível"
-            style={inputStyle}
-          />
+          <label style={{ marginTop: 15, display: "block" }}>
+            Câmbio (somente carro)
+          </label>
+          <input name="cambio" style={inputStyle} />
 
-          <textarea
-            name="observacoes"
-            placeholder="Observações do veículo"
-            style={{ ...inputStyle, minHeight: 80 }}
-          />
+          <label style={{ marginTop: 15, display: "block" }}>
+            Combustível (somente carro)
+          </label>
+          <input name="combustivel" style={inputStyle} />
 
-          <button type="submit" style={buttonStyle}>
-            Salvar Veículo
-          </button>
+          <label style={{ marginTop: 15, display: "block" }}>
+            Observações
+          </label>
+          <textarea name="observacoes" style={inputStyle} />
+
+          <br /><br />
+
+          <button type="submit">Cadastrar Veículo</button>
         </form>
       </section>
+
+      {/* QR CODE */}
+      {qrUrl && (
+        <section style={{ marginTop: 40, textAlign: "center" }}>
+          <h3>QR Code do Veículo</h3>
+          <QRCodeCanvas value={qrUrl} size={220} />
+          <p style={{ marginTop: 10 }}>{qrUrl}</p>
+        </section>
+      )}
     </main>
   );
 }
