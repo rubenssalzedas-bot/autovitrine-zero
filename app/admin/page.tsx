@@ -109,9 +109,6 @@ export default function AdminPage() {
       {/* CADASTRO DE VEÍCULO */}
       <section>
         <h2>Cadastrar Veículo</h2>
-        <p style={{ color: "red", fontWeight: "bold" }}>
-  TESTE TIPO DE VEÍCULO ATIVO
-</p>
 
 
         <form onSubmit={cadastrarVeiculo}>
