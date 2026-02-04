@@ -1,61 +1,73 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { QRCodeCanvas } from "qrcode.react";
 import jsPDF from "jspdf";
 
 export default function CarroPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+
   const id = params.id as string;
+  const slugLoja = searchParams.get("loja");
 
   const [carro, setCarro] = useState<any>(null);
+  const [whatsappLoja, setWhatsappLoja] = useState<string | null>(null);
   const [qrPdfReady, setQrPdfReady] = useState(false);
 
   useEffect(() => {
     if (!id) return;
 
     async function carregar() {
-      const { data } = await supabase
+      // Buscar veículo
+      const { data: veiculo } = await supabase
         .from("veiculos")
         .select("*")
         .eq("id", id)
         .single();
 
-      setCarro(data);
+      setCarro(veiculo);
+
+      // Buscar WhatsApp da loja
+      if (slugLoja) {
+        const { data: loja } = await supabase
+          .from("lojas")
+          .select("whatsapp")
+          .eq("slug", slugLoja)
+          .single();
+
+        setWhatsappLoja(loja?.whatsapp || null);
+      }
     }
 
     carregar();
-  }, [id]);
+  }, [id, slugLoja]);
 
-function baixarPDF() {
-  console.log("VERSÃO NOVA DO PDF - SEM ALERTA");
+  function baixarPDF() {
+    setQrPdfReady(true);
 
-  const pdf = new jsPDF();
+    setTimeout(() => {
+      const pdf = new jsPDF();
 
-  setQrPdfReady(true);
+      pdf.setFontSize(18);
+      pdf.text(carro.modelo, 20, 20);
 
-  setTimeout(() => {
-  
-    pdf.setFontSize(18);
-    pdf.text(carro.modelo, 20, 20);
+      pdf.setFontSize(12);
+      pdf.text(`Ano: ${carro.ano}`, 20, 35);
 
-    pdf.setFontSize(12);
-    pdf.text(`Ano: ${carro.ano}`, 20, 35);
+      const canvas = document.getElementById("qr-pdf") as HTMLCanvasElement;
+      const imgData = canvas.toDataURL("image/png");
 
-    const canvas = document.getElementById("qr-pdf") as HTMLCanvasElement;
-    const imgData = canvas.toDataURL("image/png");
+      pdf.addImage(imgData, "PNG", 20, 55, 120, 120);
+      pdf.text("Escaneie o QR Code para ver este veículo", 20, 185);
 
-    pdf.addImage(imgData, "PNG", 20, 55, 120, 120);
-    pdf.text("Escaneie o QR Code para ver este veículo", 20, 185);
+      pdf.save(`qr-${carro.modelo}-${Date.now()}.pdf`);
 
-    pdf.save(`qr-${carro.modelo}-${Date.now()}.pdf`);
-
-    setQrPdfReady(false);
-  }, 300);
-}
-
+      setQrPdfReady(false);
+    }, 300);
+  }
 
   if (!carro) {
     return <p style={{ padding: 40 }}>Carregando...</p>;
@@ -85,12 +97,33 @@ function baixarPDF() {
         </>
       )}
 
+      {/* BOTÃO WHATSAPP */}
+      {whatsappLoja && (
+        <a
+          href={`https://wa.me/${whatsappLoja}?text=Olá! Tenho interesse no ${carro.modelo} ${carro.ano}.`}
+          target="_blank"
+          style={{
+            display: "block",
+            marginTop: 25,
+            background: "#25D366",
+            color: "#fff",
+            padding: "14px",
+            borderRadius: 8,
+            textAlign: "center",
+            fontWeight: "bold",
+            textDecoration: "none"
+          }}
+        >
+          Falar no WhatsApp
+        </a>
+      )}
+
       <hr style={{ margin: "30px 0" }} />
 
       {/* QR VISÍVEL NA TELA */}
       <div style={{ textAlign: "center" }}>
         <QRCodeCanvas
-          value={`${baseUrl}/carro/${id}`}
+          value={`${baseUrl}/carro/${id}?loja=${slugLoja}`}
           size={220}
         />
 
@@ -117,7 +150,7 @@ function baixarPDF() {
         {qrPdfReady && (
           <QRCodeCanvas
             id="qr-pdf"
-            value={`${baseUrl}/carro/${id}`}
+            value={`${baseUrl}/carro/${id}?loja=${slugLoja}`}
             size={300}
           />
         )}
