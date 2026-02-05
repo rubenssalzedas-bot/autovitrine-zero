@@ -7,24 +7,26 @@ type TipoVeiculo = "carro" | "moto";
 
 export default function AdminPage() {
   /* =====================
-     TODOS OS HOOKS PRIMEIRO
+     🔐 SEGURANÇA
   ====================== */
-
   const SENHA_CORRETA =
     process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "senha-local";
 
   const [autenticado, setAutenticado] = useState(false);
   const [senha, setSenha] = useState("");
 
+  /* =====================
+     📦 ESTADOS
+  ====================== */
   const [lojas, setLojas] = useState<any[]>([]);
   const [veiculos, setVeiculos] = useState<any[]>([]);
-  const [lojaFiltro, setLojaFiltro] = useState("");
-  const [tipoSelecionado, setTipoSelecionado] =
-    useState<TipoVeiculo>("carro");
+  const [lojaSelecionada, setLojaSelecionada] = useState("");
+  const [tipoVeiculo, setTipoVeiculo] = useState<TipoVeiculo>("carro");
+  const [editandoVeiculo, setEditandoVeiculo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   /* =====================
-     EFEITOS
+     🔄 LOAD INICIAL
   ====================== */
   useEffect(() => {
     if (autenticado) {
@@ -33,33 +35,60 @@ export default function AdminPage() {
     }
   }, [autenticado]);
 
-  /* =====================
-     FUNÇÕES
-  ====================== */
   async function carregarLojas() {
-    const { data } = await supabase
-      .from("lojas")
-      .select("slug, nome")
-      .order("nome");
+    const { data } = await supabase.from("lojas").select("*").order("nome");
     setLojas(data || []);
   }
 
   async function carregarVeiculos(slug?: string) {
-    let query = supabase.from("veiculos").select("*");
+    let query = supabase.from("veiculos").select("*").order("created_at", {
+      ascending: false
+    });
     if (slug) query = query.eq("loja_slug", slug);
     const { data } = await query;
     setVeiculos(data || []);
   }
 
-  async function cadastrarVeiculo(e: any) {
+  /* =====================
+     🏬 LOJAS
+  ====================== */
+  async function cadastrarLoja(e: any) {
     e.preventDefault();
-    if (loading) return;
+    const f = e.target;
 
+    const { error } = await supabase.from("lojas").insert({
+      nome: f.nome.value,
+      slug: f.slug.value,
+      whatsapp: f.whatsapp.value,
+      cor: f.cor.value
+    });
+
+    if (error) {
+      alert("Erro ao cadastrar loja");
+    } else {
+      alert("Loja cadastrada");
+      f.reset();
+      carregarLojas();
+    }
+  }
+
+  async function excluirLoja(slug: string) {
+    if (!confirm("Excluir loja e seus veículos?")) return;
+    await supabase.from("lojas").delete().eq("slug", slug);
+    carregarLojas();
+    carregarVeiculos();
+  }
+
+  /* =====================
+     🚗 VEÍCULOS
+  ====================== */
+  async function salvarVeiculo(e: any) {
+    e.preventDefault();
     setLoading(true);
     const f = e.target;
 
-    const payload: any = {
-      tipo: tipoSelecionado,
+    const dados: any = {
+      tipo: tipoVeiculo,
       modelo: f.modelo.value,
       ano: f.ano.value,
       preco: f.preco.value,
@@ -67,79 +96,61 @@ export default function AdminPage() {
       loja_slug: f.loja_slug.value
     };
 
-    if (tipoSelecionado === "carro") {
-      payload.km = f.km.value;
-      payload.cambio = f.cambio.value;
-      payload.combustivel = f.combustivel.value;
+    if (tipoVeiculo === "carro") {
+      dados.km = f.km.value;
+      dados.cambio = f.cambio.value;
+      dados.combustivel = f.combustivel.value;
     }
 
-    if (tipoSelecionado === "moto") {
-      payload.cilindrada = f.cilindrada.value;
-      payload.partida = f.partida.value;
-      payload.freio = f.freio.value;
+    if (tipoVeiculo === "moto") {
+      dados.cilindrada = f.cilindrada.value;
+      dados.partida = f.partida.value;
+      dados.freio = f.freio.value;
     }
 
-    const { error } = await supabase.from("veiculos").insert(payload);
-
-    if (error) {
-      alert("❌ Erro ao cadastrar veículo");
+    if (editandoVeiculo) {
+      await supabase
+        .from("veiculos")
+        .update(dados)
+        .eq("id", editandoVeiculo.id);
+      setEditandoVeiculo(null);
     } else {
-      alert("✅ Veículo cadastrado");
-      f.reset();
-      carregarVeiculos(lojaFiltro);
+      await supabase.from("veiculos").insert(dados);
     }
 
+    alert("Veículo salvo");
+    f.reset();
+    carregarVeiculos(lojaSelecionada);
     setLoading(false);
   }
 
   async function excluirVeiculo(id: string) {
     if (!confirm("Excluir veículo?")) return;
     await supabase.from("veiculos").delete().eq("id", id);
-    carregarVeiculos(lojaFiltro);
+    carregarVeiculos(lojaSelecionada);
   }
 
-  const inputStyle = {
-    width: "100%",
-    padding: 10,
-    marginTop: 5,
-    borderRadius: 6,
-    border: "1px solid #ccc"
-  };
-
   /* =====================
-     TELA DE SENHA
+     🔐 TELA DE LOGIN
   ====================== */
   if (!autenticado) {
     return (
       <main style={{ padding: 40, maxWidth: 400, margin: "120px auto" }}>
         <h2>Área restrita</h2>
-
         <input
           type="password"
-          placeholder="Digite a senha"
+          placeholder="Senha"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
-          style={inputStyle}
+          style={{ width: "100%", padding: 12 }}
         />
-
         <button
-          style={{
-            marginTop: 15,
-            width: "100%",
-            padding: 12,
-            background: "#294460",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            fontWeight: "bold"
-          }}
-          onClick={() => {
-            if (senha === SENHA_CORRETA) {
-              setAutenticado(true);
-            } else {
-              alert("❌ Senha incorreta");
-            }
-          }}
+          style={{ marginTop: 15, width: "100%", padding: 12 }}
+          onClick={() =>
+            senha === SENHA_CORRETA
+              ? setAutenticado(true)
+              : alert("Senha incorreta")
+          }
         >
           Entrar
         </button>
@@ -148,22 +159,41 @@ export default function AdminPage() {
   }
 
   /* =====================
-     ADMIN
+     🖥️ ADMIN
   ====================== */
   return (
-    <main style={{ padding: 30, maxWidth: 1100, margin: "0 auto" }}>
-      <h1>Painel Admin – AutoVitrine</h1>
+    <main style={{ padding: 30, maxWidth: 1200, margin: "0 auto" }}>
+      <h1>Admin – AutoVitrine</h1>
 
-      <label>Filtrar por loja</label>
+      <hr />
+
+      <h2>Cadastrar Loja</h2>
+      <form onSubmit={cadastrarLoja}>
+        <input name="nome" placeholder="Nome" required />
+        <input name="slug" placeholder="slug-loja" required />
+        <input name="whatsapp" placeholder="WhatsApp" required />
+        <input name="cor" type="color" />
+        <button>Cadastrar Loja</button>
+      </form>
+
+      <h3>Lojas</h3>
+      {lojas.map((l) => (
+        <div key={l.id}>
+          {l.nome} ({l.slug})
+          <button onClick={() => excluirLoja(l.slug)}>Excluir</button>
+        </div>
+      ))}
+
+      <hr />
+
+      <h2>Veículos</h2>
       <select
-        value={lojaFiltro}
         onChange={(e) => {
-          setLojaFiltro(e.target.value);
+          setLojaSelecionada(e.target.value);
           carregarVeiculos(e.target.value);
         }}
-        style={inputStyle}
       >
-        <option value="">Todas</option>
+        <option value="">Todas as lojas</option>
         {lojas.map((l) => (
           <option key={l.slug} value={l.slug}>
             {l.nome}
@@ -171,40 +201,48 @@ export default function AdminPage() {
         ))}
       </select>
 
-      <hr style={{ margin: 30 }} />
-
-      <h2>Cadastrar Veículo</h2>
-      <form onSubmit={cadastrarVeiculo}>
-        <input name="loja_slug" placeholder="slug-da-loja" required style={inputStyle} />
+      <form onSubmit={salvarVeiculo}>
         <select
-          value={tipoSelecionado}
-          onChange={(e) => setTipoSelecionado(e.target.value as TipoVeiculo)}
-          style={inputStyle}
+          value={tipoVeiculo}
+          onChange={(e) => setTipoVeiculo(e.target.value as TipoVeiculo)}
         >
           <option value="carro">Carro</option>
           <option value="moto">Moto</option>
         </select>
 
-        <input name="modelo" placeholder="Modelo" required style={inputStyle} />
-        <input name="ano" placeholder="Ano" required style={inputStyle} />
-        <input name="preco" placeholder="Preço" required style={inputStyle} />
-        <textarea name="observacoes" placeholder="Observações" style={inputStyle} />
+        <input name="loja_slug" placeholder="slug da loja" required />
+        <input name="modelo" placeholder="Modelo" required />
+        <input name="ano" placeholder="Ano" required />
+        <input name="preco" placeholder="Preço" required />
+        <textarea name="observacoes" placeholder="Observações" />
 
-        <br /><br />
+        {tipoVeiculo === "carro" && (
+          <>
+            <input name="km" placeholder="KM" />
+            <input name="cambio" placeholder="Câmbio" />
+            <input name="combustivel" placeholder="Combustível" />
+          </>
+        )}
+
+        {tipoVeiculo === "moto" && (
+          <>
+            <input name="cilindrada" placeholder="Cilindrada" />
+            <input name="partida" placeholder="Partida" />
+            <input name="freio" placeholder="Freio" />
+          </>
+        )}
+
         <button disabled={loading}>
-          {loading ? "Salvando..." : "Cadastrar"}
+          {loading ? "Salvando..." : "Salvar Veículo"}
         </button>
       </form>
 
-      <hr style={{ margin: 30 }} />
-
-      <h2>Veículos cadastrados</h2>
+      <h3>Veículos cadastrados</h3>
       {veiculos.map((v) => (
-        <div key={v.id} style={{ display: "flex", justifyContent: "space-between" }}>
-          <span>{v.modelo} ({v.tipo})</span>
-          <button onClick={() => excluirVeiculo(v.id)} style={{ color: "red" }}>
-            Excluir
-          </button>
+        <div key={v.id}>
+          {v.modelo} ({v.tipo})
+          <button onClick={() => setEditandoVeiculo(v)}>Editar</button>
+          <button onClick={() => excluirVeiculo(v.id)}>Excluir</button>
         </div>
       ))}
     </main>
