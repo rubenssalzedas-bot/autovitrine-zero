@@ -1,13 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { QRCodeCanvas } from "qrcode.react";
 
 export default function AdminPage() {
-  const [qrUrl, setQrUrl] = useState("");
   const [tipoSelecionado, setTipoSelecionado] = useState<"carro" | "moto">("carro");
+  const [veiculos, setVeiculos] = useState<any[]>([]);
+  const [qrUrl, setQrUrl] = useState("");
 
+  /* =========================
+     CARREGAR VEÍCULOS
+  ========================== */
+  async function carregarVeiculos() {
+    const { data } = await supabase
+      .from("veiculos")
+      .select("id, modelo, ano, tipo, loja_slug")
+      .order("created_at", { ascending: false });
+
+    setVeiculos(data || []);
+  }
+
+  useEffect(() => {
+    carregarVeiculos();
+  }, []);
+
+  /* =========================
+     CADASTRAR LOJA
+  ========================== */
   async function cadastrarLoja(e: any) {
     e.preventDefault();
     const form = e.target;
@@ -28,10 +48,12 @@ export default function AdminPage() {
     }
   }
 
+  /* =========================
+     CADASTRAR VEÍCULO
+  ========================== */
   async function cadastrarVeiculo(e: any) {
     e.preventDefault();
     const form = e.target;
-
     const tipo = form.tipo.value;
 
     const payload: any = {
@@ -43,7 +65,6 @@ export default function AdminPage() {
       loja_slug: form.loja_slug.value
     };
 
-    // Campos específicos
     if (tipo === "carro") {
       payload.km = form.km.value;
       payload.cambio = form.cambio.value;
@@ -73,6 +94,27 @@ export default function AdminPage() {
       setQrUrl(`${baseUrl}/carro/${data.id}?loja=${data.loja_slug}`);
       form.reset();
       setTipoSelecionado("carro");
+      carregarVeiculos();
+    }
+  }
+
+  /* =========================
+     EXCLUIR VEÍCULO
+  ========================== */
+  async function excluirVeiculo(id: string) {
+    const confirmar = confirm("Tem certeza que deseja excluir este veículo?");
+    if (!confirmar) return;
+
+    const { error } = await supabase
+      .from("veiculos")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      alert("❌ Erro ao excluir veículo");
+    } else {
+      alert("✅ Veículo excluído");
+      carregarVeiculos();
     }
   }
 
@@ -85,10 +127,10 @@ export default function AdminPage() {
   };
 
   return (
-    <main style={{ padding: 30, maxWidth: 700, margin: "0 auto" }}>
+    <main style={{ padding: 30, maxWidth: 800, margin: "0 auto" }}>
       <h1>Painel Admin – AutoVitrine</h1>
 
-      {/* CADASTRO DE LOJA */}
+      {/* ================= LOJA ================= */}
       <section style={{ marginTop: 40 }}>
         <h2>Cadastrar Loja</h2>
 
@@ -104,12 +146,7 @@ export default function AdminPage() {
           <label style={{ marginTop: 15, display: "block" }}>
             WhatsApp
           </label>
-          <input
-            name="whatsapp"
-            required
-            placeholder="5511999999999"
-            style={inputStyle}
-          />
+          <input name="whatsapp" required style={inputStyle} />
 
           <label style={{ marginTop: 15, display: "block" }}>
             Cor da Loja
@@ -123,7 +160,7 @@ export default function AdminPage() {
 
       <hr style={{ margin: "40px 0" }} />
 
-      {/* CADASTRO DE VEÍCULO */}
+      {/* ================= VEÍCULO ================= */}
       <section>
         <h2>Cadastrar Veículo</h2>
 
@@ -136,7 +173,6 @@ export default function AdminPage() {
           </label>
           <select
             name="tipo"
-            required
             style={inputStyle}
             value={tipoSelecionado}
             onChange={(e) => setTipoSelecionado(e.target.value as any)}
@@ -145,64 +181,42 @@ export default function AdminPage() {
             <option value="moto">Moto</option>
           </select>
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            Modelo
-          </label>
+          <label style={{ marginTop: 15 }}>Modelo</label>
           <input name="modelo" required style={inputStyle} />
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            Ano
-          </label>
+          <label style={{ marginTop: 15 }}>Ano</label>
           <input name="ano" required style={inputStyle} />
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            Preço
-          </label>
+          <label style={{ marginTop: 15 }}>Preço</label>
           <input name="preco" required style={inputStyle} />
 
-          {/* CAMPOS DE CARRO */}
           {tipoSelecionado === "carro" && (
             <>
-              <label style={{ marginTop: 15, display: "block" }}>
-                KM
-              </label>
+              <label style={{ marginTop: 15 }}>KM</label>
               <input name="km" style={inputStyle} />
 
-              <label style={{ marginTop: 15, display: "block" }}>
-                Câmbio
-              </label>
+              <label style={{ marginTop: 15 }}>Câmbio</label>
               <input name="cambio" style={inputStyle} />
 
-              <label style={{ marginTop: 15, display: "block" }}>
-                Combustível
-              </label>
+              <label style={{ marginTop: 15 }}>Combustível</label>
               <input name="combustivel" style={inputStyle} />
             </>
           )}
 
-          {/* CAMPOS DE MOTO */}
           {tipoSelecionado === "moto" && (
             <>
-              <label style={{ marginTop: 15, display: "block" }}>
-                Cilindrada
-              </label>
+              <label style={{ marginTop: 15 }}>Cilindrada</label>
               <input name="cilindrada" style={inputStyle} />
 
-              <label style={{ marginTop: 15, display: "block" }}>
-                Partida
-              </label>
-              <input name="partida" placeholder="Elétrica / Pedal" style={inputStyle} />
+              <label style={{ marginTop: 15 }}>Partida</label>
+              <input name="partida" style={inputStyle} />
 
-              <label style={{ marginTop: 15, display: "block" }}>
-                Freio
-              </label>
-              <input name="freio" placeholder="ABS / Disco / Tambor" style={inputStyle} />
+              <label style={{ marginTop: 15 }}>Freio</label>
+              <input name="freio" style={inputStyle} />
             </>
           )}
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            Observações
-          </label>
+          <label style={{ marginTop: 15 }}>Observações</label>
           <textarea name="observacoes" style={inputStyle} />
 
           <br /><br />
@@ -210,7 +224,7 @@ export default function AdminPage() {
         </form>
       </section>
 
-      {/* QR CODE */}
+      {/* ================= QR ================= */}
       {qrUrl && (
         <section style={{ marginTop: 40, textAlign: "center" }}>
           <h3>QR Code do Veículo</h3>
@@ -218,6 +232,48 @@ export default function AdminPage() {
           <p style={{ marginTop: 10 }}>{qrUrl}</p>
         </section>
       )}
+
+      <hr style={{ margin: "40px 0" }} />
+
+      {/* ================= LISTA ================= */}
+      <section>
+        <h2>Veículos cadastrados</h2>
+
+        {veiculos.length === 0 && <p>Nenhum veículo cadastrado.</p>}
+
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {veiculos.map((v) => (
+            <li
+              key={v.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "10px 0",
+                borderBottom: "1px solid #ddd"
+              }}
+            >
+              <span>
+                {v.modelo} {v.ano} • {v.tipo}
+              </span>
+
+              <button
+                onClick={() => excluirVeiculo(v.id)}
+                style={{
+                  background: "#c0392b",
+                  color: "#fff",
+                  border: "none",
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  cursor: "pointer"
+                }}
+              >
+                Excluir
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   );
 }
