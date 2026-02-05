@@ -25,6 +25,31 @@ export default function AdminPage() {
     setLojas(data || []);
   }
 
+  async function excluirLoja(slug: string) {
+    const confirmar = confirm(
+      "Tem certeza que deseja excluir esta loja?\n\n⚠️ Ela NÃO pode ter veículos cadastrados."
+    );
+    if (!confirmar) return;
+
+    const { error } = await supabase
+      .from("lojas")
+      .delete()
+      .eq("slug", slug);
+
+    if (error) {
+      alert(
+        "❌ Não foi possível excluir a loja.\n\nVerifique se existem veículos vinculados."
+      );
+    } else {
+      alert("✅ Loja excluída com sucesso");
+      carregarLojas();
+      if (lojaFiltro === slug) {
+        setLojaFiltro("");
+        setVeiculos([]);
+      }
+    }
+  }
+
   /* =========================
      VEÍCULOS
   ========================== */
@@ -122,7 +147,7 @@ export default function AdminPage() {
   }
 
   /* =========================
-     EDITAR / EXCLUIR
+     EDITAR / EXCLUIR VEÍCULO
   ========================== */
   function editarVeiculo(v: any) {
     setEditando(v);
@@ -160,6 +185,33 @@ export default function AdminPage() {
         </form>
       </section>
 
+      {/* ===== LISTA DE LOJAS ===== */}
+      <section style={{ marginTop: 30 }}>
+        <h2>Lojas cadastradas</h2>
+
+        {lojas.length === 0 && <p>Nenhuma loja cadastrada.</p>}
+
+        {lojas.map((l) => (
+          <div
+            key={l.slug}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: 10,
+              borderBottom: "1px solid #ddd"
+            }}
+          >
+            <span>{l.nome}</span>
+            <button
+              onClick={() => excluirLoja(l.slug)}
+              style={{ color: "red" }}
+            >
+              Excluir
+            </button>
+          </div>
+        ))}
+      </section>
+
       <hr style={{ margin: "40px 0" }} />
 
       {/* ===== FILTRO ===== */}
@@ -181,7 +233,7 @@ export default function AdminPage() {
 
       <hr style={{ margin: "40px 0" }} />
 
-      {/* ===== VEÍCULO ===== */}
+      {/* ===== VEÍCULOS ===== */}
       <section>
         <h2>{editando ? "Editar Veículo" : "Cadastrar Veículo"}</h2>
 
@@ -234,7 +286,7 @@ export default function AdminPage() {
 
       <hr style={{ margin: "40px 0" }} />
 
-      {/* ===== LISTA ===== */}
+      {/* ===== LISTA DE VEÍCULOS ===== */}
       <section>
         <h2>Veículos</h2>
 
