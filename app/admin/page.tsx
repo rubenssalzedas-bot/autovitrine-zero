@@ -6,28 +6,19 @@ import { supabase } from "@/lib/supabase";
 type TipoVeiculo = "carro" | "moto";
 
 export default function AdminPage() {
-  /* =====================
-     🔐 SEGURANÇA
-  ====================== */
   const SENHA_CORRETA =
     process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "senha-local";
 
   const [autenticado, setAutenticado] = useState(false);
   const [senha, setSenha] = useState("");
 
-  /* =====================
-     📦 ESTADOS
-  ====================== */
   const [lojas, setLojas] = useState<any[]>([]);
   const [veiculos, setVeiculos] = useState<any[]>([]);
-  const [lojaSelecionada, setLojaSelecionada] = useState("");
-  const [tipoVeiculo, setTipoVeiculo] = useState<TipoVeiculo>("carro");
-  const [editandoVeiculo, setEditandoVeiculo] = useState<any>(null);
+  const [lojaFiltro, setLojaFiltro] = useState("");
+  const [tipoVeiculo, setTipoVeiculo] =
+    useState<TipoVeiculo>("carro");
   const [loading, setLoading] = useState(false);
 
-  /* =====================
-     🔄 LOAD INICIAL
-  ====================== */
   useEffect(() => {
     if (autenticado) {
       carregarLojas();
@@ -36,22 +27,25 @@ export default function AdminPage() {
   }, [autenticado]);
 
   async function carregarLojas() {
-    const { data } = await supabase.from("lojas").select("*").order("nome");
+    const { data } = await supabase
+      .from("lojas")
+      .select("*")
+      .order("nome");
     setLojas(data || []);
   }
 
   async function carregarVeiculos(slug?: string) {
-    let query = supabase.from("veiculos").select("*").order("created_at", {
-      ascending: false
-    });
+    let query = supabase
+      .from("veiculos")
+      .select("*")
+      .order("created_at", { ascending: false });
+
     if (slug) query = query.eq("loja_slug", slug);
+
     const { data } = await query;
     setVeiculos(data || []);
   }
 
-  /* =====================
-     🏬 LOJAS
-  ====================== */
   async function cadastrarLoja(e: any) {
     e.preventDefault();
     const f = e.target;
@@ -79,10 +73,7 @@ export default function AdminPage() {
     carregarVeiculos();
   }
 
-  /* =====================
-     🚗 VEÍCULOS
-  ====================== */
-  async function salvarVeiculo(e: any) {
+  async function cadastrarVeiculo(e: any) {
     e.preventDefault();
     setLoading(true);
     const f = e.target;
@@ -108,143 +99,156 @@ export default function AdminPage() {
       dados.freio = f.freio.value;
     }
 
-    if (editandoVeiculo) {
-      await supabase
-        .from("veiculos")
-        .update(dados)
-        .eq("id", editandoVeiculo.id);
-      setEditandoVeiculo(null);
+    const { error } = await supabase.from("veiculos").insert(dados);
+
+    if (error) {
+      alert("Erro ao cadastrar veículo");
     } else {
-      await supabase.from("veiculos").insert(dados);
+      alert("Veículo cadastrado");
+      f.reset();
+      carregarVeiculos(lojaFiltro);
     }
 
-    alert("Veículo salvo");
-    f.reset();
-    carregarVeiculos(lojaSelecionada);
     setLoading(false);
   }
 
-  async function excluirVeiculo(id: string) {
-    if (!confirm("Excluir veículo?")) return;
-    await supabase.from("veiculos").delete().eq("id", id);
-    carregarVeiculos(lojaSelecionada);
-  }
-
-  /* =====================
-     🔐 TELA DE LOGIN
-  ====================== */
   if (!autenticado) {
     return (
-      <main style={{ padding: 40, maxWidth: 400, margin: "120px auto" }}>
-        <h2>Área restrita</h2>
-        <input
-          type="password"
-          placeholder="Senha"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          style={{ width: "100%", padding: 12 }}
-        />
-        <button
-          style={{ marginTop: 15, width: "100%", padding: 12 }}
-          onClick={() =>
-            senha === SENHA_CORRETA
-              ? setAutenticado(true)
-              : alert("Senha incorreta")
-          }
-        >
-          Entrar
-        </button>
+      <main style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#f3f4f6"
+      }}>
+        <div style={{
+          background: "#fff",
+          padding: 30,
+          borderRadius: 10,
+          width: 360,
+          boxShadow: "0 10px 25px rgba(0,0,0,0.1)"
+        }}>
+          <h2>Admin AutoVitrine</h2>
+
+          <input
+            type="password"
+            placeholder="Senha"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 12,
+              marginTop: 10,
+              borderRadius: 6,
+              border: "1px solid #ccc"
+            }}
+          />
+
+          <button
+            style={{
+              marginTop: 15,
+              width: "100%",
+              padding: 12,
+              background: "#294460",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              fontWeight: "bold"
+            }}
+            onClick={() =>
+              senha === SENHA_CORRETA
+                ? setAutenticado(true)
+                : alert("Senha incorreta")
+            }
+          >
+            Entrar
+          </button>
+        </div>
       </main>
     );
   }
 
-  /* =====================
-     🖥️ ADMIN
-  ====================== */
+  const cardStyle = {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 30,
+    boxShadow: "0 5px 15px rgba(0,0,0,0.05)"
+  };
+
+  const inputStyle = {
+    width: "100%",
+    padding: 10,
+    marginTop: 8,
+    borderRadius: 6,
+    border: "1px solid #ccc"
+  };
+
   return (
-    <main style={{ padding: 30, maxWidth: 1200, margin: "0 auto" }}>
-      <h1>Admin – AutoVitrine</h1>
+    <main style={{
+      background: "#f3f4f6",
+      minHeight: "100vh",
+      padding: 30
+    }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <h1 style={{ marginBottom: 30 }}>Painel Admin – AutoVitrine</h1>
 
-      <hr />
-
-      <h2>Cadastrar Loja</h2>
-      <form onSubmit={cadastrarLoja}>
-        <input name="nome" placeholder="Nome" required />
-        <input name="slug" placeholder="slug-loja" required />
-        <input name="whatsapp" placeholder="WhatsApp" required />
-        <input name="cor" type="color" />
-        <button>Cadastrar Loja</button>
-      </form>
-
-      <h3>Lojas</h3>
-      {lojas.map((l) => (
-        <div key={l.id}>
-          {l.nome} ({l.slug})
-          <button onClick={() => excluirLoja(l.slug)}>Excluir</button>
+        <div style={cardStyle}>
+          <h3>Cadastrar Loja</h3>
+          <form onSubmit={cadastrarLoja}>
+            <input name="nome" placeholder="Nome da loja" required style={inputStyle} />
+            <input name="slug" placeholder="slug-da-loja" required style={inputStyle} />
+            <input name="whatsapp" placeholder="WhatsApp" required style={inputStyle} />
+            <input name="cor" type="color" style={{ marginTop: 10 }} />
+            <button style={{ marginTop: 15 }}>Cadastrar</button>
+          </form>
         </div>
-      ))}
 
-      <hr />
-
-      <h2>Veículos</h2>
-      <select
-        onChange={(e) => {
-          setLojaSelecionada(e.target.value);
-          carregarVeiculos(e.target.value);
-        }}
-      >
-        <option value="">Todas as lojas</option>
-        {lojas.map((l) => (
-          <option key={l.slug} value={l.slug}>
-            {l.nome}
-          </option>
-        ))}
-      </select>
-
-      <form onSubmit={salvarVeiculo}>
-        <select
-          value={tipoVeiculo}
-          onChange={(e) => setTipoVeiculo(e.target.value as TipoVeiculo)}
-        >
-          <option value="carro">Carro</option>
-          <option value="moto">Moto</option>
-        </select>
-
-        <input name="loja_slug" placeholder="slug da loja" required />
-        <input name="modelo" placeholder="Modelo" required />
-        <input name="ano" placeholder="Ano" required />
-        <input name="preco" placeholder="Preço" required />
-        <textarea name="observacoes" placeholder="Observações" />
-
-        {tipoVeiculo === "carro" && (
-          <>
-            <input name="km" placeholder="KM" />
-            <input name="cambio" placeholder="Câmbio" />
-            <input name="combustivel" placeholder="Combustível" />
-          </>
-        )}
-
-        {tipoVeiculo === "moto" && (
-          <>
-            <input name="cilindrada" placeholder="Cilindrada" />
-            <input name="partida" placeholder="Partida" />
-            <input name="freio" placeholder="Freio" />
-          </>
-        )}
-
-        <button disabled={loading}>
-          {loading ? "Salvando..." : "Salvar Veículo"}
-        </button>
-      </form>
-
-      <h3>Veículos cadastrados</h3>
-      {veiculos.map((v) => (
-        <div key={v.id}>
-          {v.modelo} ({v.tipo})
-          <button onClick={() => setEditandoVeiculo(v)}>Editar</button>
-          <button onClick={() => excluirVeiculo(v.id)}>Excluir</button>
+        <div style={cardStyle}>
+          <h3>Lojas</h3>
+          {lojas.map(l => (
+            <div key={l.id} style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>{l.nome}</span>
+              <button onClick={() => excluirLoja(l.slug)} style={{ color: "red" }}>
+                Excluir
+              </button>
+            </div>
+          ))}
         </div>
-      ))}
+
+        <div style={cardStyle}>
+          <h3>Cadastrar Veículo</h3>
+          <form onSubmit={cadastrarVeiculo}>
+            <select
+              value={tipoVeiculo}
+              onChange={(e) => setTipoVeiculo(e.target.value as TipoVeiculo)}
+              style={inputStyle}
+            >
+              <option value="carro">Carro</option>
+              <option value="moto">Moto</option>
+            </select>
+
+            <input name="loja_slug" placeholder="slug da loja" required style={inputStyle} />
+            <input name="modelo" placeholder="Modelo" required style={inputStyle} />
+            <input name="ano" placeholder="Ano" required style={inputStyle} />
+            <input name="preco" placeholder="Preço" required style={inputStyle} />
+            <textarea name="observacoes" placeholder="Observações" style={inputStyle} />
+
+            <button style={{ marginTop: 15 }} disabled={loading}>
+              {loading ? "Salvando..." : "Cadastrar Veículo"}
+            </button>
+          </form>
+        </div>
+
+        <div style={cardStyle}>
+          <h3>Veículos Cadastrados</h3>
+          {veiculos.map(v => (
+            <div key={v.id} style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>{v.modelo} ({v.tipo})</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </main>
   );
 }
