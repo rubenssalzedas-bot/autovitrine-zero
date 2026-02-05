@@ -2,32 +2,76 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { QRCodeCanvas } from "qrcode.react";
 
 type TipoVeiculo = "carro" | "moto";
 
 export default function AdminPage() {
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoVeiculo>("carro");
   const [veiculos, setVeiculos] = useState<any[]>([]);
-  const [qrUrl, setQrUrl] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [lojas, setLojas] = useState<any[]>([]);
+  const [lojaFiltro, setLojaFiltro] = useState("");
   const [editando, setEditando] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   /* =========================
-     CARREGAR VEÍCULOS
+     LOJAS
   ========================== */
-  async function carregarVeiculos() {
+  async function carregarLojas() {
     const { data } = await supabase
+      .from("lojas")
+      .select("slug, nome")
+      .order("nome");
+
+    setLojas(data || []);
+  }
+
+  /* =========================
+     VEÍCULOS
+  ========================== */
+  async function carregarVeiculos(slug?: string) {
+    let query = supabase
       .from("veiculos")
       .select("*")
       .order("created_at", { ascending: false });
 
+    if (slug) query = query.eq("loja_slug", slug);
+
+    const { data } = await query;
     setVeiculos(data || []);
   }
 
   useEffect(() => {
+    carregarLojas();
     carregarVeiculos();
   }, []);
+
+  useEffect(() => {
+    carregarVeiculos(lojaFiltro);
+  }, [lojaFiltro]);
+
+  /* =========================
+     CADASTRAR LOJA
+  ========================== */
+  async function cadastrarLoja(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+
+    const { error } = await supabase.from("lojas").insert({
+      slug: form.slug.value,
+      nome: form.nome.value,
+      whatsapp: form.whatsapp.value,
+      cor: form.cor.value,
+      logo: ""
+    });
+
+    if (error) {
+      alert("❌ Erro ao cadastrar loja: " + error.message);
+    } else {
+      alert("✅ Loja cadastrada com sucesso");
+      form.reset();
+      carregarLojas();
+    }
+  }
 
   /* =========================
      CADASTRAR / EDITAR VEÍCULO
@@ -60,45 +104,35 @@ export default function AdminPage() {
       payload.freio = form.freio.value;
     }
 
-    let result;
-
-    if (editando) {
-      result = await supabase
-        .from("veiculos")
-        .update(payload)
-        .eq("id", editando.id);
-    } else {
-      result = await supabase.from("veiculos").insert(payload);
-    }
+    const result = editando
+      ? await supabase.from("veiculos").update(payload).eq("id", editando.id)
+      : await supabase.from("veiculos").insert(payload);
 
     if (result.error) {
-      alert("❌ Erro ao salvar veículo: " + result.error.message);
+      alert("❌ Erro ao salvar veículo");
     } else {
       alert(editando ? "✅ Veículo atualizado" : "✅ Veículo cadastrado");
-
       form.reset();
-      setTipoSelecionado("carro");
       setEditando(null);
-      carregarVeiculos();
+      setTipoSelecionado("carro");
+      carregarVeiculos(lojaFiltro);
     }
 
     setLoading(false);
   }
 
   /* =========================
-     EXCLUIR VEÍCULO
+     EDITAR / EXCLUIR
   ========================== */
-  async function excluirVeiculo(id: string) {
-    const confirmar = confirm("Tem certeza que deseja excluir este veículo?");
-    if (!confirmar) return;
-
-    await supabase.from("veiculos").delete().eq("id", id);
-    carregarVeiculos();
-  }
-
   function editarVeiculo(v: any) {
     setEditando(v);
     setTipoSelecionado(v.tipo);
+  }
+
+  async function excluirVeiculo(id: string) {
+    if (!confirm("Tem certeza que deseja excluir este veículo?")) return;
+    await supabase.from("veiculos").delete().eq("id", id);
+    carregarVeiculos(lojaFiltro);
   }
 
   const inputStyle = {
@@ -110,114 +144,90 @@ export default function AdminPage() {
   };
 
   return (
-    <main style={{ padding: 30, maxWidth: 900, margin: "0 auto" }}>
+    <main style={{ padding: 30, maxWidth: 1100, margin: "0 auto" }}>
       <h1>Painel Admin – AutoVitrine</h1>
+
+      {/* ===== CADASTRAR LOJA ===== */}
+      <section>
+        <h2>Cadastrar Loja</h2>
+        <form onSubmit={cadastrarLoja}>
+          <input name="slug" placeholder="slug-da-loja" required style={inputStyle} />
+          <input name="nome" placeholder="Nome da loja" required style={inputStyle} />
+          <input name="whatsapp" placeholder="5511999999999" required style={inputStyle} />
+          <input type="color" name="cor" defaultValue="#294460" />
+          <br /><br />
+          <button>Cadastrar Loja</button>
+        </form>
+      </section>
+
+      <hr style={{ margin: "40px 0" }} />
+
+      {/* ===== FILTRO ===== */}
+      <section>
+        <label>Filtrar por loja</label>
+        <select
+          value={lojaFiltro}
+          onChange={(e) => setLojaFiltro(e.target.value)}
+          style={inputStyle}
+        >
+          <option value="">Todas as lojas</option>
+          {lojas.map((l) => (
+            <option key={l.slug} value={l.slug}>
+              {l.nome}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      <hr style={{ margin: "40px 0" }} />
 
       {/* ===== VEÍCULO ===== */}
       <section>
         <h2>{editando ? "Editar Veículo" : "Cadastrar Veículo"}</h2>
 
         <form onSubmit={salvarVeiculo}>
-          <label>Slug da Loja</label>
           <input
             name="loja_slug"
-            defaultValue={editando?.loja_slug}
+            placeholder="slug-da-loja"
+            defaultValue={editando?.loja_slug || lojaFiltro}
             required
             style={inputStyle}
           />
 
-          <label>Tipo</label>
           <select
             value={tipoSelecionado}
-            onChange={(e) =>
-              setTipoSelecionado(e.target.value as TipoVeiculo)
-            }
+            onChange={(e) => setTipoSelecionado(e.target.value as TipoVeiculo)}
             style={inputStyle}
           >
             <option value="carro">Carro</option>
             <option value="moto">Moto</option>
           </select>
 
-          <label>Modelo</label>
-          <input
-            name="modelo"
-            defaultValue={editando?.modelo}
-            required
-            style={inputStyle}
-          />
-
-          <label>Ano</label>
-          <input
-            name="ano"
-            defaultValue={editando?.ano}
-            required
-            style={inputStyle}
-          />
-
-          <label>Preço</label>
-          <input
-            name="preco"
-            defaultValue={editando?.preco}
-            required
-            style={inputStyle}
-          />
+          <input name="modelo" placeholder="Modelo" defaultValue={editando?.modelo} required style={inputStyle} />
+          <input name="ano" placeholder="Ano" defaultValue={editando?.ano} required style={inputStyle} />
+          <input name="preco" placeholder="Preço" defaultValue={editando?.preco} required style={inputStyle} />
 
           {tipoSelecionado === "carro" && (
             <>
-              <label>KM</label>
-              <input name="km" defaultValue={editando?.km} style={inputStyle} />
-
-              <label>Câmbio</label>
-              <input
-                name="cambio"
-                defaultValue={editando?.cambio}
-                style={inputStyle}
-              />
-
-              <label>Combustível</label>
-              <input
-                name="combustivel"
-                defaultValue={editando?.combustivel}
-                style={inputStyle}
-              />
+              <input name="km" placeholder="KM" defaultValue={editando?.km} style={inputStyle} />
+              <input name="cambio" placeholder="Câmbio" defaultValue={editando?.cambio} style={inputStyle} />
+              <input name="combustivel" placeholder="Combustível" defaultValue={editando?.combustivel} style={inputStyle} />
             </>
           )}
 
           {tipoSelecionado === "moto" && (
             <>
-              <label>Cilindrada</label>
-              <input
-                name="cilindrada"
-                defaultValue={editando?.cilindrada}
-                style={inputStyle}
-              />
-
-              <label>Partida</label>
-              <input
-                name="partida"
-                defaultValue={editando?.partida}
-                style={inputStyle}
-              />
-
-              <label>Freio</label>
-              <input
-                name="freio"
-                defaultValue={editando?.freio}
-                style={inputStyle}
-              />
+              <input name="cilindrada" placeholder="Cilindrada" defaultValue={editando?.cilindrada} style={inputStyle} />
+              <input name="partida" placeholder="Partida" defaultValue={editando?.partida} style={inputStyle} />
+              <input name="freio" placeholder="Freio" defaultValue={editando?.freio} style={inputStyle} />
             </>
           )}
 
-          <label>Observações</label>
-          <textarea
-            name="observacoes"
-            defaultValue={editando?.observacoes}
-            style={inputStyle}
-          />
+          <textarea name="observacoes" placeholder="Observações" defaultValue={editando?.observacoes} style={inputStyle} />
 
           <br /><br />
-          <button type="submit" disabled={loading}>
-            {editando ? "Salvar alterações" : "Cadastrar veículo"}
+          <button disabled={loading}>
+            {loading ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar veículo"}
           </button>
         </form>
       </section>
@@ -226,28 +236,14 @@ export default function AdminPage() {
 
       {/* ===== LISTA ===== */}
       <section>
-        <h2>Veículos cadastrados</h2>
+        <h2>Veículos</h2>
 
         {veiculos.map((v) => (
-          <div
-            key={v.id}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: 10,
-              borderBottom: "1px solid #ddd"
-            }}
-          >
-            <span>
-              {v.modelo} {v.ano} • {v.tipo}
-            </span>
-
+          <div key={v.id} style={{ display: "flex", justifyContent: "space-between", padding: 10 }}>
+            <span>{v.modelo} {v.ano} • {v.tipo}</span>
             <div>
               <button onClick={() => editarVeiculo(v)}>Editar</button>{" "}
-              <button
-                onClick={() => excluirVeiculo(v.id)}
-                style={{ color: "red" }}
-              >
+              <button onClick={() => excluirVeiculo(v.id)} style={{ color: "red" }}>
                 Excluir
               </button>
             </div>
