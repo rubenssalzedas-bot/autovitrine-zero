@@ -4,21 +4,26 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { QRCodeCanvas } from "qrcode.react";
 
+type TipoVeiculo = "carro" | "moto";
+
 export default function AdminPage() {
-  const [tipoSelecionado, setTipoSelecionado] = useState<"carro" | "moto">("carro");
+  const [tipoSelecionado, setTipoSelecionado] = useState<TipoVeiculo>("carro");
   const [veiculos, setVeiculos] = useState<any[]>([]);
   const [qrUrl, setQrUrl] = useState("");
+  const [loading, setLoading] = useState(false);
 
   /* =========================
      CARREGAR VEÍCULOS
   ========================== */
   async function carregarVeiculos() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("veiculos")
       .select("id, modelo, ano, tipo, loja_slug")
       .order("created_at", { ascending: false });
 
-    setVeiculos(data || []);
+    if (!error) {
+      setVeiculos(data || []);
+    }
   }
 
   useEffect(() => {
@@ -28,15 +33,15 @@ export default function AdminPage() {
   /* =========================
      CADASTRAR LOJA
   ========================== */
-  async function cadastrarLoja(e: any) {
+  async function cadastrarLoja(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = e.target;
+    const form = e.currentTarget;
 
     const { error } = await supabase.from("lojas").insert({
-      slug: form.slug.value,
-      nome: form.nome.value,
-      whatsapp: form.whatsapp.value,
-      cor: form.cor.value,
+      slug: (form.elements.namedItem("slug") as HTMLInputElement).value,
+      nome: (form.elements.namedItem("nome") as HTMLInputElement).value,
+      whatsapp: (form.elements.namedItem("whatsapp") as HTMLInputElement).value,
+      cor: (form.elements.namedItem("cor") as HTMLInputElement).value,
       logo: ""
     });
 
@@ -51,30 +56,43 @@ export default function AdminPage() {
   /* =========================
      CADASTRAR VEÍCULO
   ========================== */
-  async function cadastrarVeiculo(e: any) {
+  async function cadastrarVeiculo(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = e.target;
-    const tipo = form.tipo.value;
+    if (loading) return;
+
+    setLoading(true);
+
+    const form = e.currentTarget;
+
+    const tipo = (form.elements.namedItem("tipo") as HTMLSelectElement)
+      .value as TipoVeiculo;
 
     const payload: any = {
       tipo,
-      modelo: form.modelo.value,
-      ano: form.ano.value,
-      preco: form.preco.value,
-      observacoes: form.observacoes.value,
-      loja_slug: form.loja_slug.value
+      modelo: (form.elements.namedItem("modelo") as HTMLInputElement).value,
+      ano: (form.elements.namedItem("ano") as HTMLInputElement).value,
+      preco: (form.elements.namedItem("preco") as HTMLInputElement).value,
+      observacoes: (form.elements.namedItem("observacoes") as HTMLTextAreaElement)
+        .value,
+      loja_slug: (form.elements.namedItem("loja_slug") as HTMLInputElement).value
     };
 
     if (tipo === "carro") {
-      payload.km = form.km.value;
-      payload.cambio = form.cambio.value;
-      payload.combustivel = form.combustivel.value;
+      payload.km = (form.elements.namedItem("km") as HTMLInputElement).value;
+      payload.cambio = (form.elements.namedItem("cambio") as HTMLInputElement).value;
+      payload.combustivel = (
+        form.elements.namedItem("combustivel") as HTMLInputElement
+      ).value;
     }
 
     if (tipo === "moto") {
-      payload.cilindrada = form.cilindrada.value;
-      payload.partida = form.partida.value;
-      payload.freio = form.freio.value;
+      payload.cilindrada = (
+        form.elements.namedItem("cilindrada") as HTMLInputElement
+      ).value;
+      payload.partida = (
+        form.elements.namedItem("partida") as HTMLInputElement
+      ).value;
+      payload.freio = (form.elements.namedItem("freio") as HTMLInputElement).value;
     }
 
     const { data, error } = await supabase
@@ -85,17 +103,21 @@ export default function AdminPage() {
 
     if (error) {
       alert("❌ Erro ao cadastrar veículo: " + error.message);
-    } else {
-      alert("✅ Veículo cadastrado com sucesso");
-
-      const baseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-
-      setQrUrl(`${baseUrl}/carro/${data.id}?loja=${data.loja_slug}`);
-      form.reset();
-      setTipoSelecionado("carro");
-      carregarVeiculos();
+      setLoading(false);
+      return;
     }
+
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+    setQrUrl(`${baseUrl}/carro/${data.id}?loja=${data.loja_slug}`);
+
+    alert("✅ Veículo cadastrado com sucesso");
+
+    form.reset();
+    setTipoSelecionado("carro");
+    carregarVeiculos();
+    setLoading(false);
   }
 
   /* =========================
@@ -118,7 +140,7 @@ export default function AdminPage() {
     }
   }
 
-  const inputStyle = {
+  const inputStyle: React.CSSProperties = {
     width: "100%",
     padding: 10,
     marginTop: 5,
@@ -127,30 +149,24 @@ export default function AdminPage() {
   };
 
   return (
-    <main style={{ padding: 30, maxWidth: 800, margin: "0 auto" }}>
+    <main style={{ padding: 30, maxWidth: 900, margin: "0 auto" }}>
       <h1>Painel Admin – AutoVitrine</h1>
 
-      {/* ================= LOJA ================= */}
-      <section style={{ marginTop: 40 }}>
+      {/* ===== CADASTRAR LOJA ===== */}
+      <section>
         <h2>Cadastrar Loja</h2>
 
         <form onSubmit={cadastrarLoja}>
           <label>Slug da Loja</label>
           <input name="slug" required style={inputStyle} />
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            Nome da Loja
-          </label>
+          <label>Nome da Loja</label>
           <input name="nome" required style={inputStyle} />
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            WhatsApp
-          </label>
+          <label>WhatsApp</label>
           <input name="whatsapp" required style={inputStyle} />
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            Cor da Loja
-          </label>
+          <label>Cor</label>
           <input type="color" name="cor" defaultValue="#294460" />
 
           <br /><br />
@@ -160,7 +176,7 @@ export default function AdminPage() {
 
       <hr style={{ margin: "40px 0" }} />
 
-      {/* ================= VEÍCULO ================= */}
+      {/* ===== CADASTRAR VEÍCULO ===== */}
       <section>
         <h2>Cadastrar Veículo</h2>
 
@@ -168,74 +184,76 @@ export default function AdminPage() {
           <label>Slug da Loja</label>
           <input name="loja_slug" required style={inputStyle} />
 
-          <label style={{ marginTop: 15, display: "block" }}>
-            Tipo de Veículo
-          </label>
+          <label>Tipo de Veículo</label>
           <select
             name="tipo"
-            style={inputStyle}
             value={tipoSelecionado}
-            onChange={(e) => setTipoSelecionado(e.target.value as any)}
+            onChange={(e) =>
+              setTipoSelecionado(e.target.value as TipoVeiculo)
+            }
+            style={inputStyle}
           >
             <option value="carro">Carro</option>
             <option value="moto">Moto</option>
           </select>
 
-          <label style={{ marginTop: 15 }}>Modelo</label>
+          <label>Modelo</label>
           <input name="modelo" required style={inputStyle} />
 
-          <label style={{ marginTop: 15 }}>Ano</label>
+          <label>Ano</label>
           <input name="ano" required style={inputStyle} />
 
-          <label style={{ marginTop: 15 }}>Preço</label>
+          <label>Preço</label>
           <input name="preco" required style={inputStyle} />
 
           {tipoSelecionado === "carro" && (
             <>
-              <label style={{ marginTop: 15 }}>KM</label>
+              <label>KM</label>
               <input name="km" style={inputStyle} />
 
-              <label style={{ marginTop: 15 }}>Câmbio</label>
+              <label>Câmbio</label>
               <input name="cambio" style={inputStyle} />
 
-              <label style={{ marginTop: 15 }}>Combustível</label>
+              <label>Combustível</label>
               <input name="combustivel" style={inputStyle} />
             </>
           )}
 
           {tipoSelecionado === "moto" && (
             <>
-              <label style={{ marginTop: 15 }}>Cilindrada</label>
+              <label>Cilindrada</label>
               <input name="cilindrada" style={inputStyle} />
 
-              <label style={{ marginTop: 15 }}>Partida</label>
+              <label>Partida</label>
               <input name="partida" style={inputStyle} />
 
-              <label style={{ marginTop: 15 }}>Freio</label>
+              <label>Freio</label>
               <input name="freio" style={inputStyle} />
             </>
           )}
 
-          <label style={{ marginTop: 15 }}>Observações</label>
+          <label>Observações</label>
           <textarea name="observacoes" style={inputStyle} />
 
           <br /><br />
-          <button type="submit">Cadastrar Veículo</button>
+          <button type="submit" disabled={loading}>
+            {loading ? "Salvando..." : "Cadastrar Veículo"}
+          </button>
         </form>
       </section>
 
-      {/* ================= QR ================= */}
+      {/* ===== QR CODE ===== */}
       {qrUrl && (
         <section style={{ marginTop: 40, textAlign: "center" }}>
           <h3>QR Code do Veículo</h3>
           <QRCodeCanvas value={qrUrl} size={220} />
-          <p style={{ marginTop: 10 }}>{qrUrl}</p>
+          <p>{qrUrl}</p>
         </section>
       )}
 
       <hr style={{ margin: "40px 0" }} />
 
-      {/* ================= LISTA ================= */}
+      {/* ===== LISTA DE VEÍCULOS ===== */}
       <section>
         <h2>Veículos cadastrados</h2>
 
