@@ -7,62 +7,15 @@ type TipoVeiculo = "carro" | "moto";
 
 export default function AdminPage() {
   /* =====================
-     PROTEÇÃO POR SENHA
+     TODOS OS HOOKS PRIMEIRO
   ====================== */
+
   const SENHA_CORRETA =
     process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "senha-local";
 
   const [autenticado, setAutenticado] = useState(false);
   const [senha, setSenha] = useState("");
 
-  if (!autenticado) {
-    return (
-      <main style={{ padding: 40, maxWidth: 400, margin: "120px auto" }}>
-        <h2>Área restrita</h2>
-
-        <input
-          type="password"
-          placeholder="Digite a senha"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          style={{
-            width: "100%",
-            padding: 12,
-            marginTop: 10,
-            borderRadius: 6,
-            border: "1px solid #ccc"
-          }}
-        />
-
-        <button
-          style={{
-            marginTop: 15,
-            width: "100%",
-            padding: 12,
-            background: "#294460",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            fontWeight: "bold",
-            cursor: "pointer"
-          }}
-          onClick={() => {
-            if (senha === SENHA_CORRETA) {
-              setAutenticado(true);
-            } else {
-              alert("❌ Senha incorreta");
-            }
-          }}
-        >
-          Entrar
-        </button>
-      </main>
-    );
-  }
-
-  /* =====================
-     ESTADOS
-  ====================== */
   const [lojas, setLojas] = useState<any[]>([]);
   const [veiculos, setVeiculos] = useState<any[]>([]);
   const [lojaFiltro, setLojaFiltro] = useState("");
@@ -71,13 +24,18 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
 
   /* =====================
-     CARREGAMENTO
+     EFEITOS
   ====================== */
   useEffect(() => {
-    carregarLojas();
-    carregarVeiculos();
-  }, []);
+    if (autenticado) {
+      carregarLojas();
+      carregarVeiculos();
+    }
+  }, [autenticado]);
 
+  /* =====================
+     FUNÇÕES
+  ====================== */
   async function carregarLojas() {
     const { data } = await supabase
       .from("lojas")
@@ -93,9 +51,6 @@ export default function AdminPage() {
     setVeiculos(data || []);
   }
 
-  /* =====================
-     CADASTRAR VEÍCULO
-  ====================== */
   async function cadastrarVeiculo(e: any) {
     e.preventDefault();
     if (loading) return;
@@ -152,7 +107,48 @@ export default function AdminPage() {
   };
 
   /* =====================
-     RENDER ADMIN
+     TELA DE SENHA
+  ====================== */
+  if (!autenticado) {
+    return (
+      <main style={{ padding: 40, maxWidth: 400, margin: "120px auto" }}>
+        <h2>Área restrita</h2>
+
+        <input
+          type="password"
+          placeholder="Digite a senha"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          style={inputStyle}
+        />
+
+        <button
+          style={{
+            marginTop: 15,
+            width: "100%",
+            padding: 12,
+            background: "#294460",
+            color: "#fff",
+            border: "none",
+            borderRadius: 6,
+            fontWeight: "bold"
+          }}
+          onClick={() => {
+            if (senha === SENHA_CORRETA) {
+              setAutenticado(true);
+            } else {
+              alert("❌ Senha incorreta");
+            }
+          }}
+        >
+          Entrar
+        </button>
+      </main>
+    );
+  }
+
+  /* =====================
+     ADMIN
   ====================== */
   return (
     <main style={{ padding: 30, maxWidth: 1100, margin: "0 auto" }}>
@@ -180,7 +176,6 @@ export default function AdminPage() {
       <h2>Cadastrar Veículo</h2>
       <form onSubmit={cadastrarVeiculo}>
         <input name="loja_slug" placeholder="slug-da-loja" required style={inputStyle} />
-
         <select
           value={tipoSelecionado}
           onChange={(e) => setTipoSelecionado(e.target.value as TipoVeiculo)}
