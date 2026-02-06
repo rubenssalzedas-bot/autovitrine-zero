@@ -249,11 +249,141 @@ export default function AdminPage() {
     border: "1px solid #ccc"
   };
 
-  return (
-    <main style={{ padding: 30, maxWidth: 1100, margin: "0 auto" }}>
-      {/* TODO: aqui fica exatamente o JSX que você já tinha */}
-      {/* NÃO MUDAREI MAIS NADA DE LÓGICA */}
-      {/* Seu JSX completo continua igual ao que você enviou */}
-    </main>
-  );
+return (
+  <main style={{ padding: 30, maxWidth: 1100, margin: "0 auto" }}>
+    <h1>Painel Admin – AutoVitrine</h1>
+
+    {/* ===== CADASTRAR LOJA ===== */}
+    <section>
+      <h2>Cadastrar Loja</h2>
+      <form onSubmit={cadastrarLoja}>
+        <input name="slug" placeholder="slug-da-loja" required style={inputStyle} />
+        <input name="nome" placeholder="Nome da loja" required style={inputStyle} />
+        <input name="whatsapp" placeholder="5511999999999" required style={inputStyle} />
+        <input type="color" name="cor" defaultValue="#294460" />
+        <br /><br />
+        <button>Cadastrar Loja</button>
+      </form>
+    </section>
+
+    {/* ===== LISTA DE LOJAS ===== */}
+    <section style={{ marginTop: 30 }}>
+      <h2>Lojas cadastradas</h2>
+
+      {lojas.length === 0 && <p>Nenhuma loja cadastrada.</p>}
+
+      {lojas.map((l) => (
+        <div
+          key={l.slug}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            padding: 10,
+            borderBottom: "1px solid #ddd"
+          }}
+        >
+          <span>{l.nome}</span>
+          <button
+            onClick={() => excluirLoja(l.slug)}
+            style={{ color: "red" }}
+          >
+            Excluir
+          </button>
+        </div>
+      ))}
+    </section>
+
+    <hr style={{ margin: "40px 0" }} />
+
+    {/* ===== FILTRO ===== */}
+    <section>
+      <label>Filtrar por loja</label>
+      <select
+        value={lojaFiltro}
+        onChange={(e) => setLojaFiltro(e.target.value)}
+        style={inputStyle}
+      >
+        <option value="">Todas as lojas</option>
+        {lojas.map((l) => (
+          <option key={l.slug} value={l.slug}>
+            {l.nome}
+          </option>
+        ))}
+      </select>
+    </section>
+
+    <hr style={{ margin: "40px 0" }} />
+
+    {/* ===== VEÍCULOS ===== */}
+    <section>
+      <h2>{editando ? "Editar Veículo" : "Cadastrar Veículo"}</h2>
+
+      <form onSubmit={salvarVeiculo}>
+        <input
+          name="loja_slug"
+          placeholder="slug-da-loja"
+          defaultValue={editando?.loja_slug || lojaFiltro}
+          required
+          style={inputStyle}
+        />
+
+        <select
+          value={tipoSelecionado}
+          onChange={(e) => setTipoSelecionado(e.target.value as TipoVeiculo)}
+          style={inputStyle}
+        >
+          <option value="carro">Carro</option>
+          <option value="moto">Moto</option>
+        </select>
+
+        <input name="modelo" placeholder="Modelo" defaultValue={editando?.modelo} required style={inputStyle} />
+        <input name="ano" placeholder="Ano" defaultValue={editando?.ano} required style={inputStyle} />
+        <input name="preco" placeholder="Preço" defaultValue={editando?.preco} required style={inputStyle} />
+
+        {tipoSelecionado === "carro" && (
+          <>
+            <input name="km" placeholder="KM" defaultValue={editando?.km} style={inputStyle} />
+            <input name="cambio" placeholder="Câmbio" defaultValue={editando?.cambio} style={inputStyle} />
+            <input name="combustivel" placeholder="Combustível" defaultValue={editando?.combustivel} style={inputStyle} />
+          </>
+        )}
+
+        {tipoSelecionado === "moto" && (
+          <>
+            <input name="cilindrada" placeholder="Cilindrada" defaultValue={editando?.cilindrada} style={inputStyle} />
+            <input name="partida" placeholder="Partida" defaultValue={editando?.partida} style={inputStyle} />
+            <input name="freio" placeholder="Freio" defaultValue={editando?.freio} style={inputStyle} />
+          </>
+        )}
+
+        <textarea name="observacoes" placeholder="Observações" defaultValue={editando?.observacoes} style={inputStyle} />
+
+        <br /><br />
+        <button disabled={loading}>
+          {loading ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar veículo"}
+        </button>
+      </form>
+    </section>
+
+    <hr style={{ margin: "40px 0" }} />
+
+    {/* ===== LISTA DE VEÍCULOS ===== */}
+    <section>
+      <h2>Veículos</h2>
+
+      {veiculos.map((v) => (
+        <div key={v.id} style={{ display: "flex", justifyContent: "space-between", padding: 10 }}>
+          <span>{v.modelo} {v.ano} • {v.tipo}</span>
+          <div>
+            <button onClick={() => editarVeiculo(v)}>Editar</button>{" "}
+            <button onClick={() => excluirVeiculo(v.id)} style={{ color: "red" }}>
+              Excluir
+            </button>
+          </div>
+        </div>
+      ))}
+    </section>
+  </main>
+);
+
 }
