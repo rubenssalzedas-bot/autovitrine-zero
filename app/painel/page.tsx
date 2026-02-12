@@ -92,7 +92,10 @@ export default function PainelLojista() {
       : await supabase.from("veiculos").insert(payload);
 
     if (result.error) {
-      alert("Erro ao salvar veículo");
+  alert("Erro: " + result.error.message);
+  console.log(result.error);
+}
+
     } else {
       alert(editando ? "Veículo atualizado" : "Veículo cadastrado");
       form.reset();
