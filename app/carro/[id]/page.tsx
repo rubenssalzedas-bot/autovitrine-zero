@@ -107,11 +107,20 @@ export default function CarroPage() {
 
       {/* ===== OBSERVAÇÕES ===== */}
       {carro.observacoes && (
-        <>
-          <hr />
-          <p><strong>Observações:</strong></p>
-          <p>{carro.observacoes}</p>
-        </>
+       <>
+    <hr />
+    <p><strong>Observações:</strong></p>
+    <ul style={{ paddingLeft: 20 }}>
+      {carro.observacoes
+        .split("\n")
+        .filter((item: string) => item.trim() !== "")
+        .map((item: string, index: number) => (
+          <li key={index} style={{ marginBottom: 6 }}>
+            {item}
+          </li>
+        ))}
+    </ul>
+  </>
       )}
 
       {/* ===== WHATSAPP ===== */}
