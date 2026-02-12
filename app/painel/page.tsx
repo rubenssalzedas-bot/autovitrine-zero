@@ -94,7 +94,6 @@ export default function PainelLojista() {
     if (result.error) {
   alert("Erro: " + result.error.message);
   console.log(result.error);
-}
 
     } else {
       alert(editando ? "Veículo atualizado" : "Veículo cadastrado");
